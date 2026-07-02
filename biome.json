@@ -3,7 +3,7 @@
 	"vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["src/**/*.ts", "test/**/*.ts"]
+		"includes": ["src/**/*.ts", "test/**/*.ts", "api/**/*.ts"]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab" },
 	"linter": { "enabled": true, "rules": { "recommended": true } },
