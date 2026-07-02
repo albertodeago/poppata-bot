@@ -12,7 +12,7 @@
 
 - **Node** ≥ 24.0.0 (`engines.node`).
 - **TypeScript** `strict: true` **and** `exactOptionalPropertyTypes: true`, `noUncheckedIndexedAccess: true`, `noUnusedLocals/Parameters: true`. Never assign `undefined` to an optional prop — conditionally spread it: `...(side ? { side } : {})`.
-- **Module system:** `"module": "nodenext"`, `"moduleResolution": "NodeNext"`, `"target": "ES2022"`. Relative imports are extensionless in source (Biome/tsc `nodenext` resolves `.ts`); match the reference which imports `./result` without extension.
+- **Module system:** `"module": "esnext"`, `"moduleResolution": "bundler"`, `"target": "ES2022"`. Relative imports are **extensionless** in source (`./result`, not `./result.js`) — the whole toolchain (tsx, Vitest/Vite, Vercel esbuild, and `tsc` under `bundler`) resolves them. Do NOT add `.js` extensions.
 - **Biome:** tab indentation, double quotes. Run `npm run lint:apply` before every commit.
 - **Errors:** return `Result<T,E>` (`success(data)` / `error(e)`); do not throw across domain boundaries. Adapters wrap I/O in `tryCatch`.
 - **Timezone:** `Europe/Rome` is a code constant (`ZONE` in `src/domain/time.ts`), never an env var.
@@ -104,8 +104,8 @@ test/unit/
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "nodenext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "baseUrl": "./",
     "outDir": "./dist",
     "esModuleInterop": true,
