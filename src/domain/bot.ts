@@ -162,10 +162,13 @@ const sendDurationReply = async (
 	);
 };
 
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 const save = async (
 	env: BotEnv & EventEnv & LoggerEnv,
 	ctx: EventContext,
 	intent: Intent,
+	timeGiven: boolean,
 ): Promise<void> => {
 	const applied = await applyIntent(intent, ctx)(env);
 	if (!applied.success) {
@@ -179,6 +182,15 @@ const save = async (
 			...closed,
 			endedAt: closed.endedAt,
 		});
+		return;
+	}
+	// A start whose time we defaulted to "now": confirm the assumed time in words
+	// (eat→"poppata", sleep→"nanna" are both feminine, so "iniziata" agrees).
+	if (intent.action === "start" && !timeGiven) {
+		await env.bot.sendMessage(
+			ctx.chatId,
+			`${cap(LABEL[intent.type])} iniziata alle ${hhmm(intent.at)}`,
+		);
 		return;
 	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
@@ -305,6 +317,7 @@ export const handleMessage =
 			return;
 		}
 
+		const timeGiven = hasTime && hour !== undefined;
 		const at =
 			hasTime && hour !== undefined
 				? resolveClock(arrival, hour, minute).toJSDate()
@@ -346,7 +359,7 @@ export const handleMessage =
 				await createPending(env, ctx, decision.intent, decision.warning);
 				return;
 			case "save":
-				await save(env, ctx, decision.intent);
+				await save(env, ctx, decision.intent, timeGiven);
 				return;
 		}
 	};

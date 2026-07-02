@@ -105,6 +105,22 @@ describe("[BOT] handleMessage", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
 
+	it("announces the assumed start time when a start has no explicit time", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		// "poppata" with no time → starts at the message arrival time (09:30)
+		await handleMessage(msg("poppata"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Poppata iniziata alle 9:30");
+		expect(mocks.bot.react).not.toHaveBeenCalled();
+	});
+
 	it("confirms-to-save a low-confidence Gemini parse", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
