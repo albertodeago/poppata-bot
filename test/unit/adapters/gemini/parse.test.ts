@@ -4,7 +4,7 @@ import { makeGeminiParser } from "../../../../src/adapters/gemini/parse.js";
 const env = {
 	config: {
 		botToken: "b",
-		allowedChatId: 1,
+		allowedChatIds: [1],
 		databaseUrl: "d",
 		geminiApiKey: "k",
 		geminiModel: "gemini-2.0-flash",

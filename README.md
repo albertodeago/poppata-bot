@@ -16,6 +16,15 @@ Single baby, single allow-listed group chat.
 
 ---
 
+## Roadmap
+
+? DB table for chat
+  - create new chat and add in allow-list
+- retry if Gemini API fails - 2 retries with a bit of wait
+- mini app telegram that shows graphs / stats
+- make it super easy to host yourself ?
+
+
 ## What it understands
 
 Free-text messages (Italian first; Gemini best-effort for anything the rules miss):
@@ -137,7 +146,7 @@ openssl rand -hex 32   # → WEBHOOK_SECRET   (Telegram allows A–Z a–z 0–9
 | var | required | purpose |
 |---|:--:|---|
 | `BOT_TOKEN` | ✅ | Telegram bot token |
-| `ALLOWED_CHAT_ID` | ✅ | the one group chat served (negative number) |
+| `ALLOWED_CHAT_ID` | ✅ | the group chat(s) served — one negative id, or several comma-separated (e.g. `-100111,-100222`) to run the same baby in multiple groups |
 | `DATABASE_URL` | ✅ | Supabase connection string — **Transaction pooler (6543)** on Vercel; **Session pooler (5432)** locally for migrations |
 | `GEMINI_API_KEY` | ✅ | Gemini REST key |
 | `CRON_SECRET` | ✅ | bearer that guards the report cron |

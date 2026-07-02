@@ -14,10 +14,10 @@ export const makeTelegrafAdapter =
 	(env: ConfigEnv & LoggerEnv): TelegrafAdapter => {
 		const bot = new telegraf(env.config.botToken);
 
-		// Serve only the allow-listed chat.
+		// Serve only the allow-listed chat(s).
 		bot.use(async (ctx, next) => {
 			const chatId = ctx.chat?.id;
-			if (chatId !== undefined && chatId !== env.config.allowedChatId) {
+			if (chatId !== undefined && !env.config.allowedChatIds.includes(chatId)) {
 				env.logger.info(`Ignoring update from chat ${chatId}`);
 				return;
 			}

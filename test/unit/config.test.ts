@@ -37,7 +37,7 @@ describe("[CONFIG] getConfig", () => {
 		Object.assign(process.env, FULL_ENV, { BABY_NAME: "Leo" });
 		const c = getConfig();
 		expect(c.botToken).toBe("tok");
-		expect(c.allowedChatId).toBe(12345);
+		expect(c.allowedChatIds).toEqual([12345]);
 		expect(c.geminiModel).toBe("gemini-2.0-flash"); // default
 		expect(c.webhookSecret).toBe("whs");
 		expect(c.babyName).toBe("Leo");
@@ -62,6 +62,18 @@ describe("[CONFIG] getConfig", () => {
 
 	it("throws when ALLOWED_CHAT_ID is not numeric", () => {
 		Object.assign(process.env, FULL_ENV, { ALLOWED_CHAT_ID: "nope" });
+		expect(() => getConfig()).toThrow(/ALLOWED_CHAT_ID/);
+	});
+
+	it("parses a comma-separated list of chat ids (with spaces)", () => {
+		Object.assign(process.env, FULL_ENV, {
+			ALLOWED_CHAT_ID: "-100111, -100222",
+		});
+		expect(getConfig().allowedChatIds).toEqual([-100111, -100222]);
+	});
+
+	it("throws when one of several chat ids is not numeric", () => {
+		Object.assign(process.env, FULL_ENV, { ALLOWED_CHAT_ID: "-100111,nope" });
 		expect(() => getConfig()).toThrow(/ALLOWED_CHAT_ID/);
 	});
 });

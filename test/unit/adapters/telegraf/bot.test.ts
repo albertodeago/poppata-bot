@@ -4,7 +4,7 @@ import { makeTelegrafAdapter } from "../../../../src/adapters/telegraf/bot.js";
 
 const config = {
 	botToken: "b",
-	allowedChatId: 1,
+	allowedChatIds: [1, 2],
 	databaseUrl: "d",
 	geminiApiKey: "k",
 	geminiModel: "m",
@@ -71,9 +71,9 @@ describe("[TELEGRAF adapter]", () => {
 		await expect(botEnv.bot.clearKeyboard(1, 100)).resolves.toBeUndefined();
 	});
 
-	it("the allow-list middleware skips other chats and passes the allowed chat", async () => {
+	it("the allow-list middleware skips other chats and passes any allow-listed chat", async () => {
 		const { Ctor, use } = makeFake();
-		makeTelegrafAdapter(Ctor)({ config, logger });
+		makeTelegrafAdapter(Ctor)({ config, logger }); // config allows chats 1 and 2
 		const middleware = use.mock.calls[0]?.[0] as (
 			ctx: { chat?: { id: number } },
 			next: () => Promise<void>,
@@ -82,6 +82,7 @@ describe("[TELEGRAF adapter]", () => {
 		await middleware({ chat: { id: 999 } }, next);
 		expect(next).not.toHaveBeenCalled();
 		await middleware({ chat: { id: 1 } }, next);
-		expect(next).toHaveBeenCalledTimes(1);
+		await middleware({ chat: { id: 2 } }, next);
+		expect(next).toHaveBeenCalledTimes(2);
 	});
 });

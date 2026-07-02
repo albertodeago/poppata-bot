@@ -19,13 +19,16 @@ export default async function handler(
 
 	try {
 		const env = makeEnv();
-		const chatId = env.config.allowedChatId;
 		const babyName = env.config.babyName;
 		const now = new Date();
+		const isMonday = romeNow(now).weekday === 1;
 
-		await sendDailyReport(chatId, now, babyName)(env);
-		if (romeNow(now).weekday === 1) {
-			await sendWeeklyReport(chatId, now, babyName)(env);
+		// Each allow-listed chat gets its own report from its own data.
+		for (const chatId of env.config.allowedChatIds) {
+			await sendDailyReport(chatId, now, babyName)(env);
+			if (isMonday) {
+				await sendWeeklyReport(chatId, now, babyName)(env);
+			}
 		}
 		await env.pendingRepository.deleteStale(new Date(now.getTime() - DAY_MS));
 

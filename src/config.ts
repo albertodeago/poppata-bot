@@ -1,6 +1,7 @@
 export type Config = {
 	botToken: string;
-	allowedChatId: number;
+	/** One or more group chats the bot serves (comma-separated in ALLOWED_CHAT_ID). */
+	allowedChatIds: number[];
 	databaseUrl: string;
 	geminiApiKey: string;
 	geminiModel: string;
@@ -21,14 +22,23 @@ const required = (name: string): string => {
 };
 
 export const getConfig = (): Config => {
-	const allowedChatId = Number.parseInt(required("ALLOWED_CHAT_ID"), 10);
-	if (Number.isNaN(allowedChatId)) {
-		throw new Error("ALLOWED_CHAT_ID must be a number");
+	const allowedChatIds = required("ALLOWED_CHAT_ID")
+		.split(",")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0)
+		.map((s) => Number.parseInt(s, 10));
+	if (
+		allowedChatIds.length === 0 ||
+		allowedChatIds.some((id) => Number.isNaN(id))
+	) {
+		throw new Error(
+			"ALLOWED_CHAT_ID must be one or more comma-separated numbers",
+		);
 	}
 
 	const config: Config = {
 		botToken: required("BOT_TOKEN"),
-		allowedChatId,
+		allowedChatIds,
 		databaseUrl: required("DATABASE_URL"),
 		geminiApiKey: required("GEMINI_API_KEY"),
 		geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
