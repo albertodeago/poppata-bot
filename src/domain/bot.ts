@@ -7,7 +7,7 @@ import {
 } from "./event";
 import type { LoggerEnv } from "./logger";
 import { type Intent, normalize, type ParserEnv, parseRules } from "./parse";
-import type { PendingEnv } from "./pending";
+import type { PendingConfirmation, PendingEnv } from "./pending";
 import type { Result } from "./result";
 import * as R from "./result";
 import { decide } from "./session";
@@ -171,6 +171,75 @@ const save = async (
 	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
 };
+
+const feedbackFor = async (
+	env: BotEnv,
+	p: PendingConfirmation,
+	closed: BabyEvent | undefined,
+): Promise<void> => {
+	if (p.intent.action === "end" && closed?.endedAt) {
+		const dur = formatDuration(
+			closed.endedAt.getTime() - closed.startedAt.getTime(),
+		);
+		await env.bot.sendMessage(
+			p.chatId,
+			`Ok, aggiunta ✅ — durata ${LABEL[closed.type]}: ${dur}`,
+		);
+		return;
+	}
+	// react on the ORIGINAL user message
+	await env.bot.react(p.chatId, p.messageId, "👍");
+};
+
+export const handleCallback =
+	(cb: IncomingCallback) =>
+	async (env: BotEnv & EventEnv & PendingEnv & LoggerEnv): Promise<void> => {
+		const [verb, pendingId] = cb.data.split(":");
+		if (!pendingId) {
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
+		const found = await env.pendingRepository.get(pendingId);
+		if (!found.success) {
+			env.logger.error("get pending failed", found.error);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+		const p = found.data;
+		if (!p) {
+			// stale / already handled
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.bot.answerCallback(cb.id, "Scaduto");
+			return;
+		}
+
+		if (verb === "ann") {
+			await env.pendingRepository.delete(p.id);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.bot.answerCallback(cb.id, "Annullato");
+			return;
+		}
+
+		// verb === "conf"
+		const ctx: EventContext = {
+			chatId: p.chatId,
+			userId: p.userId,
+			userName: p.userName,
+			messageId: p.messageId,
+			rawText: p.warning,
+		};
+		const applied = await applyIntent(p.intent, ctx)(env);
+		if (!applied.success) {
+			env.logger.error("applyIntent (confirm) failed", applied.error);
+			await env.bot.answerCallback(cb.id, "Errore");
+			return;
+		}
+		await feedbackFor(env, p, applied.data.closed);
+		await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+		await env.pendingRepository.delete(p.id);
+		await env.bot.answerCallback(cb.id);
+	};
 
 export const handleMessage =
 	(msg: IncomingMessage) =>

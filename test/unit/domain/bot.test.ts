@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { handleMessage } from "../../../src/domain/bot";
+import { handleCallback, handleMessage } from "../../../src/domain/bot";
 import type { BabyEvent } from "../../../src/domain/event";
+import type { PendingConfirmation } from "../../../src/domain/pending";
 import { success } from "../../../src/domain/result";
 import { makeTestEnv } from "../testEnv";
 
@@ -123,5 +124,107 @@ describe("[BOT] handleMessage", () => {
 			"p2",
 		);
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+});
+
+const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({
+	id: "p1",
+	chatId: 1,
+	userId: 1,
+	userName: "papà",
+	intent: {
+		type: "poop",
+		action: "instant",
+		at: new Date("2026-07-02T09:15:00+02:00"),
+		source: "gemini",
+		confidence: 0.4,
+	},
+	warning: "Ho capito: cacca alle 9:15. Confermi?",
+	messageId: 100,
+	createdAt: new Date(),
+	...over,
+});
+
+describe("[BOT] handleCallback", () => {
+	const cb = (data: string) => ({
+		id: "cbq",
+		chatId: 1,
+		userId: 1,
+		userName: "papà",
+		data,
+		messageId: 200, // the confirmation message
+	});
+
+	it("confirm applies the intent, reacts, clears keyboard, deletes pending", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(success(pending({})));
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.bot.react).toHaveBeenCalledWith(1, 100, "👍"); // original message
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("p1");
+		expect(mocks.bot.answerCallback).toHaveBeenCalled();
+	});
+
+	it("confirm of an 'end' intent replies with the duration", async () => {
+		const { env, mocks } = makeTestEnv();
+		const openEatLocal = { ...openEat };
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(
+				pending({
+					intent: {
+						type: "eat",
+						action: "end",
+						at: new Date("2026-07-02T11:00:00+02:00"),
+						source: "rules",
+						confidence: 1,
+					},
+					warning: "Durata poppata sospetta: 2h. Salvare comunque?",
+				}),
+			),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(
+			success(openEatLocal),
+		);
+		mocks.eventRepository.closeSession.mockImplementation(
+			async (_id, endedAt) => success({ ...openEatLocal, endedAt }),
+		);
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("durata poppata");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+	});
+
+	it("annulla deletes the pending and clears the keyboard without saving", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(success(pending({})));
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+
+		await handleCallback(cb("ann:p1"))(env);
+
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("p1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+		expect(mocks.bot.answerCallback).toHaveBeenCalledWith("cbq", "Annullato");
+	});
+
+	it("handles a stale/unknown pending id gracefully", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(success(null));
+
+		await handleCallback(cb("conf:gone"))(env);
+
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.bot.answerCallback).toHaveBeenCalled();
 	});
 });
