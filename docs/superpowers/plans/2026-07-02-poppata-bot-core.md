@@ -12,7 +12,7 @@
 
 - **Node** ≥ 24.0.0 (`engines.node`).
 - **TypeScript** `strict: true` **and** `exactOptionalPropertyTypes: true`, `noUncheckedIndexedAccess: true`, `noUnusedLocals/Parameters: true`. Never assign `undefined` to an optional prop — conditionally spread it: `...(side ? { side } : {})`.
-- **Module system:** `"module": "esnext"`, `"moduleResolution": "bundler"`, `"target": "ES2022"`. Relative imports are **extensionless** in source (`./result`, not `./result.js`) — the whole toolchain (tsx, Vitest/Vite, Vercel esbuild, and `tsc` under `bundler`) resolves them. Do NOT add `.js` extensions.
+- **Module system:** `"module": "esnext"`, `"moduleResolution": "bundler"`, `"target": "ES2022"`. Relative imports MUST carry an explicit `.js` extension (`./result.js`, referring to compiled output) — the deployed Vercel functions run under Node's **native ESM loader**, which does not add extensions. `tsc` (bundler), tsx, and Vitest all map the `.js` back to the `.ts` source. **(Correction: an earlier revision said imports were extensionless; that typechecked but failed at runtime on Vercel with `ERR_MODULE_NOT_FOUND`.)**
 - **Biome:** tab indentation, double quotes. Run `npm run lint:apply` before every commit.
 - **Errors:** return `Result<T,E>` (`success(data)` / `error(e)`); do not throw across domain boundaries. Adapters wrap I/O in `tryCatch`.
 - **Timezone:** `Europe/Rome` is a code constant (`ZONE` in `src/domain/time.ts`), never an env var.

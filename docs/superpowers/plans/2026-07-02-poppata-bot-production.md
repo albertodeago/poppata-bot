@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- **Node** ≥ 24. **Module system:** `"module": "esnext"`, `"moduleResolution": "bundler"`, target ES2022. Relative imports are **extensionless** (`./config`, not `./config.js`). Do NOT add `.js`.
+- **Node** ≥ 24. **Module system:** `"module": "esnext"`, `"moduleResolution": "bundler"`, target ES2022. Relative imports MUST carry an explicit `.js` extension (`./config.js`) — the deployed Vercel functions run under Node's native ESM loader. `tsc` (bundler), tsx, and Vitest map the `.js` back to the `.ts` source.
 - **TypeScript** `strict` + `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess` + `noUnusedLocals/Parameters`. Never assign `undefined` to an optional prop — conditionally spread (`...(babyName ? { babyName } : {})`).
 - **Biome:** tab indentation, double quotes. Run `npm run lint:apply` before every commit. `// biome-ignore lint/suspicious/noExplicitAny: <reason>` is allowed for the dynamically-shaped DB row type only.
 - **Errors:** return `Result<T,E>` (`success`/`error`/`tryCatch`); adapters wrap I/O in `tryCatch`; the domain never throws.
