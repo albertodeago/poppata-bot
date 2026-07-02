@@ -1,7 +1,7 @@
 import { Pool } from "pg";
-import type { ConfigEnv } from "../../config";
-import type { DBEnv } from "../../domain/db";
-import type { LoggerEnv } from "../../domain/logger";
+import type { ConfigEnv } from "../../config.js";
+import type { DBEnv } from "../../domain/db.js";
+import type { LoggerEnv } from "../../domain/logger.js";
 
 /** pg Pool over the Supabase pooled connection (port 6543). max 1 for serverless. */
 export const makePgPool = (env: ConfigEnv & LoggerEnv): DBEnv["db"] => {

@@ -1,5 +1,5 @@
-import type { BabyEvent } from "./event";
-import { formatDuration, type TimeWindow } from "./time";
+import type { BabyEvent } from "./event.js";
+import { formatDuration, type TimeWindow } from "./time.js";
 
 export interface DailyStats {
 	sleepMs: number;

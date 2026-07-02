@@ -1,8 +1,8 @@
 import { Telegraf } from "telegraf";
 import type { ReactionTypeEmoji } from "telegraf/types";
-import type { ConfigEnv } from "../../config";
-import type { BotEnv } from "../../domain/bot";
-import type { LoggerEnv } from "../../domain/logger";
+import type { ConfigEnv } from "../../config.js";
+import type { BotEnv } from "../../domain/bot.js";
+import type { LoggerEnv } from "../../domain/logger.js";
 
 export interface TelegrafAdapter {
 	instance: Telegraf;

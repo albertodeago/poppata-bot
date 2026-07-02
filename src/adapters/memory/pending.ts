@@ -1,10 +1,10 @@
-import type { LoggerEnv } from "../../domain/logger";
+import type { LoggerEnv } from "../../domain/logger.js";
 import type {
 	NewPendingConfirmation,
 	PendingConfirmation,
 	PendingRepository,
-} from "../../domain/pending";
-import * as R from "../../domain/result";
+} from "../../domain/pending.js";
+import * as R from "../../domain/result.js";
 
 export const makeMemoryPendingRepository = ({
 	logger,

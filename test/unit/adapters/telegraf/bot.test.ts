@@ -1,6 +1,6 @@
 import type { Telegraf } from "telegraf";
 import { describe, expect, it, vi } from "vitest";
-import { makeTelegrafAdapter } from "../../../../src/adapters/telegraf/bot";
+import { makeTelegrafAdapter } from "../../../../src/adapters/telegraf/bot.js";
 
 const config = {
 	botToken: "b",

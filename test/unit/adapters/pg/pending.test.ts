@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makePgPendingRepository } from "../../../../src/adapters/pg/pending";
+import { makePgPendingRepository } from "../../../../src/adapters/pg/pending.js";
 
 const logger = {
 	info: vi.fn(),

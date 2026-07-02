@@ -1,7 +1,7 @@
-import type { ConfigEnv } from "../../config";
-import type { LoggerEnv } from "../../domain/logger";
-import type { GeminiParse, ParserEnv } from "../../domain/parse";
-import { success } from "../../domain/result";
+import type { ConfigEnv } from "../../config.js";
+import type { LoggerEnv } from "../../domain/logger.js";
+import type { GeminiParse, ParserEnv } from "../../domain/parse.js";
+import { success } from "../../domain/result.js";
 
 const RESPONSE_SCHEMA = {
 	type: "object",

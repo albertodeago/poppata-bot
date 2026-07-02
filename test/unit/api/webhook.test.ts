@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "../../../api/webhook";
+import handler from "../../../api/webhook.js";
 
 const mockRes = () => {
 	const res = { status: vi.fn(), json: vi.fn() };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type BabyEvent, isOpenSession } from "../../../src/domain/event";
+import { type BabyEvent, isOpenSession } from "../../../src/domain/event.js";
 
 const base: BabyEvent = {
 	id: "1",

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeMemoryPendingRepository } from "../../../../src/adapters/memory/pending";
-import type { NewPendingConfirmation } from "../../../../src/domain/pending";
+import { makeMemoryPendingRepository } from "../../../../src/adapters/memory/pending.js";
+import type { NewPendingConfirmation } from "../../../../src/domain/pending.js";
 
 const logger = {
 	info: vi.fn(),

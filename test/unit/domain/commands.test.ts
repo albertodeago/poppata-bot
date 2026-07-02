@@ -8,10 +8,10 @@ import {
 	sendWeeklyReport,
 	settimanaCommand,
 	statoCommand,
-} from "../../../src/domain/commands";
-import type { BabyEvent } from "../../../src/domain/event";
-import { success } from "../../../src/domain/result";
-import { makeTestEnv } from "../testEnv";
+} from "../../../src/domain/commands.js";
+import type { BabyEvent } from "../../../src/domain/event.js";
+import { success } from "../../../src/domain/result.js";
+import { makeTestEnv } from "../testEnv.js";
 
 const openEat: BabyEvent = {
 	id: "s1",

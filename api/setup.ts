@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { makeEnv } from "../src/env";
+import { makeEnv } from "../src/env.js";
 
 const COMMANDS = [
 	{ command: "stato", description: "Sessione in corso" },

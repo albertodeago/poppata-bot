@@ -1,6 +1,6 @@
-import { type BabyEvent, LABEL } from "./event";
-import type { Intent } from "./parse";
-import { formatDuration, hhmm } from "./time";
+import { type BabyEvent, LABEL } from "./event.js";
+import type { Intent } from "./parse.js";
+import { formatDuration, hhmm } from "./time.js";
 
 export type Decision =
 	| { kind: "save"; intent: Intent }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { BabyEvent } from "../../../src/domain/event";
-import type { Intent } from "../../../src/domain/parse";
-import { decide } from "../../../src/domain/session";
+import type { BabyEvent } from "../../../src/domain/event.js";
+import type { Intent } from "../../../src/domain/parse.js";
+import { decide } from "../../../src/domain/session.js";
 
 const at = (iso: string) => new Date(iso);
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeGeminiParser } from "../../../../src/adapters/gemini/parse";
+import { makeGeminiParser } from "../../../../src/adapters/gemini/parse.js";
 
 const env = {
 	config: {

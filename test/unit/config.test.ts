@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getConfig } from "../../src/config";
+import { getConfig } from "../../src/config.js";
 
 const FULL_ENV = {
 	BOT_TOKEN: "tok",

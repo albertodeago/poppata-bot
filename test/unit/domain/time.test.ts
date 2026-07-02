@@ -9,7 +9,7 @@ import {
 	resolveClock,
 	romeNow,
 	ZONE,
-} from "../../../src/domain/time";
+} from "../../../src/domain/time.js";
 
 const rome = (iso: string) => DateTime.fromISO(iso, { zone: ZONE });
 

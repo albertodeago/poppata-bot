@@ -1,15 +1,15 @@
 import { createInterface } from "node:readline";
-import { makeConsoleBot } from "./adapters/console/bot";
-import { makeLogger } from "./adapters/console/logger";
-import { makeMemoryEventRepository } from "./adapters/memory/event";
-import { makeMemoryPendingRepository } from "./adapters/memory/pending";
-import { makeNoopParser } from "./adapters/noop/parser";
+import { makeConsoleBot } from "./adapters/console/bot.js";
+import { makeLogger } from "./adapters/console/logger.js";
+import { makeMemoryEventRepository } from "./adapters/memory/event.js";
+import { makeMemoryPendingRepository } from "./adapters/memory/pending.js";
+import { makeNoopParser } from "./adapters/noop/parser.js";
 import {
 	type BotEnv,
 	handleCallback,
 	handleMessage,
 	type IncomingMessage,
-} from "./domain/bot";
+} from "./domain/bot.js";
 import {
 	annullaCommand,
 	helpCommand,
@@ -20,11 +20,11 @@ import {
 	settimanaCommand,
 	startCommand,
 	statoCommand,
-} from "./domain/commands";
-import type { EventEnv } from "./domain/event";
-import type { LoggerEnv } from "./domain/logger";
-import type { ParserEnv } from "./domain/parse";
-import type { PendingEnv } from "./domain/pending";
+} from "./domain/commands.js";
+import type { EventEnv } from "./domain/event.js";
+import type { LoggerEnv } from "./domain/logger.js";
+import type { ParserEnv } from "./domain/parse.js";
+import type { PendingEnv } from "./domain/pending.js";
 
 const DEV_CHAT_ID = 1;
 const DEV_USER_ID = 1;

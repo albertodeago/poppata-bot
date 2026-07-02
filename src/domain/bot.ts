@@ -4,14 +4,14 @@ import {
 	type EventSource,
 	LABEL,
 	type NewBabyEvent,
-} from "./event";
-import type { LoggerEnv } from "./logger";
-import { type Intent, normalize, type ParserEnv, parseRules } from "./parse";
-import type { PendingConfirmation, PendingEnv } from "./pending";
-import type { Result } from "./result";
-import * as R from "./result";
-import { decide } from "./session";
-import { formatDuration, hhmm, resolveClock, romeNow } from "./time";
+} from "./event.js";
+import type { LoggerEnv } from "./logger.js";
+import { type Intent, normalize, type ParserEnv, parseRules } from "./parse.js";
+import type { PendingConfirmation, PendingEnv } from "./pending.js";
+import type { Result } from "./result.js";
+import * as R from "./result.js";
+import { decide } from "./session.js";
+import { formatDuration, hhmm, resolveClock, romeNow } from "./time.js";
 
 export interface BotEnv {
 	bot: {

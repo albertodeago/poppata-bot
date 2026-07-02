@@ -1,5 +1,5 @@
-import type { EventSource, EventType, Side } from "./event";
-import type { Result } from "./result";
+import type { EventSource, EventType, Side } from "./event.js";
+import type { Result } from "./result.js";
 
 export type Action = "start" | "end" | "instant";
 

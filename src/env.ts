@@ -1,18 +1,18 @@
 import type { Telegraf } from "telegraf";
 import type { Update } from "telegraf/types";
-import { makeLogger } from "./adapters/console/logger";
-import { makePgPool } from "./adapters/db/pool";
-import { makeGeminiParser } from "./adapters/gemini/parse";
-import { makePgEventRepository } from "./adapters/pg/event";
-import { makePgPendingRepository } from "./adapters/pg/pending";
-import { makeTelegrafAdapter } from "./adapters/telegraf/bot";
-import { type ConfigEnv, getConfig } from "./config";
-import type { BotEnv } from "./domain/bot";
-import type { DBEnv } from "./domain/db";
-import type { EventEnv } from "./domain/event";
-import type { LoggerEnv } from "./domain/logger";
-import type { ParserEnv } from "./domain/parse";
-import type { PendingEnv } from "./domain/pending";
+import { makeLogger } from "./adapters/console/logger.js";
+import { makePgPool } from "./adapters/db/pool.js";
+import { makeGeminiParser } from "./adapters/gemini/parse.js";
+import { makePgEventRepository } from "./adapters/pg/event.js";
+import { makePgPendingRepository } from "./adapters/pg/pending.js";
+import { makeTelegrafAdapter } from "./adapters/telegraf/bot.js";
+import { type ConfigEnv, getConfig } from "./config.js";
+import type { BotEnv } from "./domain/bot.js";
+import type { DBEnv } from "./domain/db.js";
+import type { EventEnv } from "./domain/event.js";
+import type { LoggerEnv } from "./domain/logger.js";
+import type { ParserEnv } from "./domain/parse.js";
+import type { PendingEnv } from "./domain/pending.js";
 
 type InfraEnv = {
 	telegrafBot: Telegraf;

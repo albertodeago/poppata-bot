@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "../../../../api/cron/report";
+import handler from "../../../../api/cron/report.js";
 
 const mockRes = () => {
 	const res = { status: vi.fn(), json: vi.fn() };

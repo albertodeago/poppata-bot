@@ -1,12 +1,12 @@
-import type { BotEnv } from "./bot";
-import { type EventEnv, LABEL } from "./event";
-import type { LoggerEnv } from "./logger";
+import type { BotEnv } from "./bot.js";
+import { type EventEnv, LABEL } from "./event.js";
+import type { LoggerEnv } from "./logger.js";
 import {
 	aggregate,
 	aggregateWeekly,
 	formatDaily,
 	formatWeekly,
-} from "./report";
+} from "./report.js";
 import {
 	currentDayWindow,
 	currentWeekWindow,
@@ -16,7 +16,7 @@ import {
 	previousWeekWindow,
 	romeNow,
 	type TimeWindow,
-} from "./time";
+} from "./time.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const INTERNAL_ERROR = "Errore interno, riprova.";

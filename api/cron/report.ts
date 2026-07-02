@@ -1,7 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { sendDailyReport, sendWeeklyReport } from "../../src/domain/commands";
-import { romeNow } from "../../src/domain/time";
-import { makeEnv } from "../../src/env";
+import {
+	sendDailyReport,
+	sendWeeklyReport,
+} from "../../src/domain/commands.js";
+import { romeNow } from "../../src/domain/time.js";
+import { makeEnv } from "../../src/env.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

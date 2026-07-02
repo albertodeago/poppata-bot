@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { BabyEvent } from "../../../src/domain/event";
+import type { BabyEvent } from "../../../src/domain/event.js";
 import {
 	aggregate,
 	aggregateWeekly,
 	formatDaily,
-} from "../../../src/domain/report";
-import type { TimeWindow } from "../../../src/domain/time";
+} from "../../../src/domain/report.js";
+import type { TimeWindow } from "../../../src/domain/time.js";
 
 const d = (iso: string) => new Date(iso);
 const window: TimeWindow = {

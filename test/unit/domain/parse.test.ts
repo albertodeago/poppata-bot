@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalize, parseRules } from "../../../src/domain/parse";
+import { normalize, parseRules } from "../../../src/domain/parse.js";
 
 describe("[PARSE] normalize", () => {
 	it("lowercases, trims, strips accents", () => {

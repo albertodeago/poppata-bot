@@ -1,5 +1,5 @@
-import type { BotEnv } from "../../domain/bot";
-import type { LoggerEnv } from "../../domain/logger";
+import type { BotEnv } from "../../domain/bot.js";
+import type { LoggerEnv } from "../../domain/logger.js";
 
 export interface ConsoleBotState {
 	lastPendingId?: string | undefined;

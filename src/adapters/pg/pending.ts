@@ -1,13 +1,13 @@
-import type { DBEnv } from "../../domain/db";
-import type { EventSource, EventType, Side } from "../../domain/event";
-import type { LoggerEnv } from "../../domain/logger";
-import type { Action, Intent } from "../../domain/parse";
+import type { DBEnv } from "../../domain/db.js";
+import type { EventSource, EventType, Side } from "../../domain/event.js";
+import type { LoggerEnv } from "../../domain/logger.js";
+import type { Action, Intent } from "../../domain/parse.js";
 import type {
 	NewPendingConfirmation,
 	PendingConfirmation,
 	PendingRepository,
-} from "../../domain/pending";
-import { tryCatch } from "../../domain/result";
+} from "../../domain/pending.js";
+import { tryCatch } from "../../domain/result.js";
 
 interface IntentJson {
 	type: string;

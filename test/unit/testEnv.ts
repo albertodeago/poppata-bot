@@ -1,9 +1,9 @@
 import { vi } from "vitest";
-import type { BotEnv } from "../../src/domain/bot";
-import type { EventEnv } from "../../src/domain/event";
-import type { LoggerEnv } from "../../src/domain/logger";
-import type { ParserEnv } from "../../src/domain/parse";
-import type { PendingEnv } from "../../src/domain/pending";
+import type { BotEnv } from "../../src/domain/bot.js";
+import type { EventEnv } from "../../src/domain/event.js";
+import type { LoggerEnv } from "../../src/domain/logger.js";
+import type { ParserEnv } from "../../src/domain/parse.js";
+import type { PendingEnv } from "../../src/domain/pending.js";
 
 export const makeTestEnv = () => {
 	const mocks = {

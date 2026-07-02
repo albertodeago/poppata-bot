@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makePgEventRepository } from "../../../../src/adapters/pg/event";
+import { makePgEventRepository } from "../../../../src/adapters/pg/event.js";
 
 const logger = {
 	info: vi.fn(),

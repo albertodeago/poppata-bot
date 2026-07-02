@@ -4,7 +4,7 @@ import {
 	handleMessage,
 	type IncomingCallback,
 	type IncomingMessage,
-} from "../src/domain/bot";
+} from "../src/domain/bot.js";
 import {
 	annullaCommand,
 	helpCommand,
@@ -13,8 +13,8 @@ import {
 	settimanaCommand,
 	startCommand,
 	statoCommand,
-} from "../src/domain/commands";
-import { type Env, makeEnv } from "../src/env";
+} from "../src/domain/commands.js";
+import { type Env, makeEnv } from "../src/env.js";
 
 let env: Env;
 let initialized = false;

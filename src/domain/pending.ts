@@ -1,5 +1,5 @@
-import type { Intent } from "./parse";
-import type { Result } from "./result";
+import type { Intent } from "./parse.js";
+import type { Result } from "./result.js";
 
 export interface PendingConfirmation {
 	id: string;

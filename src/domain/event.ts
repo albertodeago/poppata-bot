@@ -1,4 +1,4 @@
-import type { Result } from "./result";
+import type { Result } from "./result.js";
 
 export type EventType = "eat" | "sleep" | "pee" | "poop";
 export type Side = "dx" | "sx";

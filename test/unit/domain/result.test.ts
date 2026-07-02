@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { error, success, tryCatch } from "../../../src/domain/result";
+import { error, success, tryCatch } from "../../../src/domain/result.js";
 
 describe("[RESULT]", () => {
 	it("success wraps data", () => {

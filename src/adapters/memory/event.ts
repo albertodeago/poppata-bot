@@ -2,10 +2,10 @@ import type {
 	BabyEvent,
 	EventRepository,
 	NewBabyEvent,
-} from "../../domain/event";
-import { isOpenSession } from "../../domain/event";
-import type { LoggerEnv } from "../../domain/logger";
-import * as R from "../../domain/result";
+} from "../../domain/event.js";
+import { isOpenSession } from "../../domain/event.js";
+import type { LoggerEnv } from "../../domain/logger.js";
+import * as R from "../../domain/result.js";
 
 export const makeMemoryEventRepository = ({
 	logger,

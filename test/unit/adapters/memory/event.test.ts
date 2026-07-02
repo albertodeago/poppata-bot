@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeMemoryEventRepository } from "../../../../src/adapters/memory/event";
-import type { NewBabyEvent } from "../../../../src/domain/event";
+import { makeMemoryEventRepository } from "../../../../src/adapters/memory/event.js";
+import type { NewBabyEvent } from "../../../../src/domain/event.js";
 
 const logger = {
 	info: vi.fn(),

@@ -1,4 +1,4 @@
-import type { DBEnv } from "../../domain/db";
+import type { DBEnv } from "../../domain/db.js";
 import type {
 	BabyEvent,
 	EventRepository,
@@ -6,9 +6,9 @@ import type {
 	EventType,
 	NewBabyEvent,
 	Side,
-} from "../../domain/event";
-import type { LoggerEnv } from "../../domain/logger";
-import { tryCatch } from "../../domain/result";
+} from "../../domain/event.js";
+import type { LoggerEnv } from "../../domain/logger.js";
+import { tryCatch } from "../../domain/result.js";
 
 interface EventRow {
 	id: string;

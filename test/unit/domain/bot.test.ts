@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { handleCallback, handleMessage } from "../../../src/domain/bot";
-import type { BabyEvent } from "../../../src/domain/event";
-import type { PendingConfirmation } from "../../../src/domain/pending";
-import { success } from "../../../src/domain/result";
-import { makeTestEnv } from "../testEnv";
+import { handleCallback, handleMessage } from "../../../src/domain/bot.js";
+import type { BabyEvent } from "../../../src/domain/event.js";
+import type { PendingConfirmation } from "../../../src/domain/pending.js";
+import { success } from "../../../src/domain/result.js";
+import { makeTestEnv } from "../testEnv.js";
 
 const msg = (text: string, at = new Date("2026-07-02T09:30:00+02:00")) => ({
 	chatId: 1,
