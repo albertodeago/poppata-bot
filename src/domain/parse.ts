@@ -50,8 +50,12 @@ export const normalize = (text: string): string =>
 
 const EAT = /\b(poppata|allatta(?:mento)?|tetta|latte|poppa)\b/;
 const SLEEP = /\b(nanna|dorme|dormit\w*|sonnellino|sleep)\b/;
-const PEE = /\b(pipi|plin)\b/;
-const POOP = /\b(cacca|pupu|feci|poop)\b/;
+// Text is normalized (accent-stripped, lowercased) before matching, so
+// `pipì`→`pipi`, `popò`→`popo`, `pupù`→`pupu`. Word-stems (`\w*`) cover
+// conjugations while avoiding false positives like `piscina` (pool), `cacao`,
+// `caccia` (hunt), `cagnolino`, `popolo`.
+const PEE = /\b(pipi|plin|pisci[oa]\w*)\b/;
+const POOP = /\b(cacca|cacchin\w*|cacat\w*|caga\w*|pupu|popo|feci|poop)\b/;
 const START = /\b(inizio|inizia|start|comincia)\b/;
 const END = /\b(fine|finit[ao]|stop|end|basta)\b/;
 const SIDE_DX = /\b(dx|destra|right)\b/;

@@ -115,7 +115,7 @@ describe("[BOT] handleMessage", () => {
 			success({ ...p, id: "p2", createdAt: new Date() }),
 		);
 
-		await handleMessage(msg("credo abbia fatto la popo"))(env);
+		await handleMessage(msg("credo abbia sporcato il pannolino"))(env);
 
 		expect(mocks.pendingRepository.create).toHaveBeenCalledTimes(1);
 		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
@@ -132,7 +132,7 @@ const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({
 	chatId: 1,
 	userId: 1,
 	userName: "papà",
-	rawText: "credo abbia fatto la popo",
+	rawText: "credo abbia sporcato il pannolino",
 	intent: {
 		type: "poop",
 		action: "instant",
@@ -169,7 +169,7 @@ describe("[BOT] handleCallback", () => {
 
 		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
 		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.rawText).toBe(
-			"credo abbia fatto la popo",
+			"credo abbia sporcato il pannolino",
 		);
 		expect(mocks.bot.react).toHaveBeenCalledWith(1, 100, "👍"); // original message
 		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);

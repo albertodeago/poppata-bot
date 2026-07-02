@@ -77,6 +77,30 @@ describe("[PARSE] parseRules", () => {
 				hasTime: true,
 			},
 		},
+		{
+			input: "piscio",
+			expect: { type: "pee", action: "instant", confidence: 1 },
+		},
+		{
+			input: "pisciata",
+			expect: { type: "pee", action: "instant", confidence: 1 },
+		},
+		{
+			input: "popò",
+			expect: { type: "poop", action: "instant", confidence: 1 },
+		},
+		{
+			input: "cagare",
+			expect: { type: "poop", action: "instant", confidence: 1 },
+		},
+		{
+			input: "cacata",
+			expect: { type: "poop", action: "instant", confidence: 1 },
+		},
+		// false-positive guards (must NOT be parsed as pee/poop)
+		{ input: "andiamo in piscina", expect: { confidence: 0 } },
+		{ input: "un po di cacao", expect: { confidence: 0 } },
+		{ input: "ho visto un cane cagnolino", expect: { confidence: 0 } },
 		{ input: "ciao come stai", expect: { confidence: 0 } },
 	];
 
