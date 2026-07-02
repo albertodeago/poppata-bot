@@ -1,0 +1,127 @@
+import { describe, expect, it } from "vitest";
+import { handleMessage } from "../../../src/domain/bot";
+import type { BabyEvent } from "../../../src/domain/event";
+import { success } from "../../../src/domain/result";
+import { makeTestEnv } from "../testEnv";
+
+const msg = (text: string, at = new Date("2026-07-02T09:30:00+02:00")) => ({
+	chatId: 1,
+	userId: 1,
+	userName: "papà",
+	text,
+	messageId: 100,
+	at,
+});
+
+const openEat: BabyEvent = {
+	id: "s1",
+	chatId: 1,
+	userId: 1,
+	userName: "papà",
+	type: "eat",
+	startedAt: new Date("2026-07-02T09:00:00+02:00"),
+	source: "rules",
+	rawText: "inizio poppata 9",
+	messageId: 1,
+	createdAt: new Date("2026-07-02T09:00:00+02:00"),
+};
+
+describe("[BOT] handleMessage", () => {
+	it("saves a new feed and reacts 👍", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("inizio poppata dx 9.15"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		const inserted = mocks.eventRepository.insert.mock.calls[0]?.[0];
+		expect(inserted?.type).toBe("eat");
+		expect(inserted?.side).toBe("dx");
+		expect(mocks.bot.react).toHaveBeenCalledWith(1, 100, "👍");
+		expect(mocks.bot.sendMessage).not.toHaveBeenCalled();
+	});
+
+	it("closes the open feed on 'fine' and replies with the duration", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+		mocks.eventRepository.closeSession.mockImplementation(
+			async (_id, endedAt) => success({ ...openEat, endedAt }),
+		);
+
+		await handleMessage(msg("fine 9.40"))(env);
+
+		expect(mocks.eventRepository.closeSession).toHaveBeenCalledWith(
+			"s1",
+			new Date("2026-07-02T09:40:00+02:00"),
+		);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("durata poppata");
+		expect(text).toContain("40m");
+		expect(mocks.bot.react).not.toHaveBeenCalled();
+	});
+
+	it("asks to confirm when starting while a session is open", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "p1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("inizio nanna 10"))(env);
+
+		expect(mocks.pendingRepository.create).toHaveBeenCalledTimes(1);
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("aperta"),
+			"p1",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("reports 'no open session' on a bare 'fine' with nothing open", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+
+		await handleMessage(msg("fine"))(env);
+
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Nessuna sessione aperta da chiudere.",
+		);
+	});
+
+	it("sends the help hint when nothing parses (rules + gemini both empty)", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.parser.parse.mockResolvedValue(success(null));
+
+		await handleMessage(msg("ciao come stai"))(env);
+
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text.toLowerCase()).toContain("/help");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("confirms-to-save a low-confidence Gemini parse", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.parser.parse.mockResolvedValue(
+			success({ type: "poop", action: "instant", confidence: 0.4 }),
+		);
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "p2", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("credo abbia fatto la popo"))(env);
+
+		expect(mocks.pendingRepository.create).toHaveBeenCalledTimes(1);
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.any(String),
+			"p2",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+});
