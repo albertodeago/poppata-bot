@@ -147,6 +147,20 @@ const createPending = async (
 	await env.bot.sendConfirmation(ctx.chatId, warning, created.data.id);
 };
 
+const sendDurationReply = async (
+	env: BotEnv,
+	chatId: number,
+	closed: BabyEvent & { endedAt: Date },
+): Promise<void> => {
+	const dur = formatDuration(
+		closed.endedAt.getTime() - closed.startedAt.getTime(),
+	);
+	await env.bot.sendMessage(
+		chatId,
+		`Ok, aggiunta ✅ — durata ${LABEL[closed.type]}: ${dur}`,
+	);
+};
+
 const save = async (
 	env: BotEnv & EventEnv & LoggerEnv,
 	ctx: EventContext,
@@ -160,13 +174,10 @@ const save = async (
 	}
 	const closed = applied.data.closed;
 	if (intent.action === "end" && closed?.endedAt) {
-		const dur = formatDuration(
-			closed.endedAt.getTime() - closed.startedAt.getTime(),
-		);
-		await env.bot.sendMessage(
-			ctx.chatId,
-			`Ok, aggiunta ✅ — durata ${LABEL[closed.type]}: ${dur}`,
-		);
+		await sendDurationReply(env, ctx.chatId, {
+			...closed,
+			endedAt: closed.endedAt,
+		});
 		return;
 	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
@@ -178,13 +189,10 @@ const feedbackFor = async (
 	closed: BabyEvent | undefined,
 ): Promise<void> => {
 	if (p.intent.action === "end" && closed?.endedAt) {
-		const dur = formatDuration(
-			closed.endedAt.getTime() - closed.startedAt.getTime(),
-		);
-		await env.bot.sendMessage(
-			p.chatId,
-			`Ok, aggiunta ✅ — durata ${LABEL[closed.type]}: ${dur}`,
-		);
+		await sendDurationReply(env, p.chatId, {
+			...closed,
+			endedAt: closed.endedAt,
+		});
 		return;
 	}
 	// react on the ORIGINAL user message
