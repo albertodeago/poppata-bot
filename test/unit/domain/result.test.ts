@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { error, success, tryCatch } from "../../../src/domain/result.js";
+import { error, success, tryCatch } from "../../../src/domain/result";
 
 describe("[RESULT]", () => {
 	it("success wraps data", () => {
@@ -16,7 +16,7 @@ describe("[RESULT]", () => {
 	it("tryCatch returns success for a resolving fn", async () => {
 		const r = await tryCatch(
 			async () => "ok",
-			(e: Error) => e,
+			(e) => e,
 		);
 		expect(r.success).toBe(true);
 		if (r.success) expect(r.data).toBe("ok");
@@ -27,7 +27,7 @@ describe("[RESULT]", () => {
 			() => {
 				throw new Error("nope");
 			},
-			(e: Error) => e,
+			(e) => e,
 		);
 		expect(r.success).toBe(false);
 		if (!r.success) expect(r.error.message).toBe("nope");
