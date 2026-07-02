@@ -19,6 +19,7 @@ export default async function handler(
 		const url = `${env.config.webhookUrl.replace(/\/$/, "")}/api/webhook`;
 		await env.telegrafBot.telegram.setWebhook(url, {
 			allowed_updates: ["message", "callback_query"] as const,
+			secret_token: env.config.webhookSecret,
 		});
 		await env.telegrafBot.telegram.setMyCommands(COMMANDS);
 		return res.status(200).json({ ok: true, webhook: url });

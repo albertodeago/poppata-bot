@@ -10,6 +10,7 @@ const env = {
 		geminiModel: "gemini-2.0-flash",
 		cronSecret: "c",
 		webhookUrl: "w",
+		webhookSecret: "whs",
 	},
 	logger: {
 		info: vi.fn(),

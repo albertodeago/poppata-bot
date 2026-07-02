@@ -10,6 +10,7 @@ const config = {
 	geminiModel: "m",
 	cronSecret: "c",
 	webhookUrl: "w",
+	webhookSecret: "whs",
 };
 const logger = {
 	info: vi.fn(),

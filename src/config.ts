@@ -6,6 +6,7 @@ export type Config = {
 	geminiModel: string;
 	cronSecret: string;
 	webhookUrl: string;
+	webhookSecret: string;
 	babyName?: string;
 };
 
@@ -33,6 +34,7 @@ export const getConfig = (): Config => {
 		geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
 		cronSecret: required("CRON_SECRET"),
 		webhookUrl: required("WEBHOOK_URL"),
+		webhookSecret: required("WEBHOOK_SECRET"),
 		...(process.env.BABY_NAME ? { babyName: process.env.BABY_NAME } : {}),
 	};
 	return config;

@@ -8,6 +8,7 @@ const FULL_ENV = {
 	GEMINI_API_KEY: "gk",
 	CRON_SECRET: "cs",
 	WEBHOOK_URL: "https://ex.com",
+	WEBHOOK_SECRET: "whs",
 };
 
 describe("[CONFIG] getConfig", () => {
@@ -22,6 +23,7 @@ describe("[CONFIG] getConfig", () => {
 			"GEMINI_MODEL",
 			"CRON_SECRET",
 			"WEBHOOK_URL",
+			"WEBHOOK_SECRET",
 			"BABY_NAME",
 		]) {
 			delete process.env[k];
@@ -37,6 +39,7 @@ describe("[CONFIG] getConfig", () => {
 		expect(c.botToken).toBe("tok");
 		expect(c.allowedChatId).toBe(12345);
 		expect(c.geminiModel).toBe("gemini-2.0-flash"); // default
+		expect(c.webhookSecret).toBe("whs");
 		expect(c.babyName).toBe("Leo");
 	});
 

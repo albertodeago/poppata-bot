@@ -87,6 +87,10 @@ export default async function handler(
 	if (req.method !== "POST") {
 		return res.status(405).json({ error: "Method not allowed" });
 	}
+	const secret = process.env.WEBHOOK_SECRET;
+	if (!secret || req.headers["x-telegram-bot-api-secret-token"] !== secret) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
 	try {
 		initBot();
 		await env.handleWebhook(req.body);

@@ -23,6 +23,7 @@ Gemini as a fallback parser.
 | `GEMINI_MODEL` | optional, default `gemini-2.0-flash` |
 | `CRON_SECRET` | bearer for the report cron |
 | `WEBHOOK_URL` | deployment base URL (e.g. `https://poppata-bot.vercel.app`) |
+| `WEBHOOK_SECRET` | secret token Telegram echoes back on each webhook call (generate e.g. `openssl rand -hex 32`) |
 | `BABY_NAME` | optional, for report headers |
 
 ## Deploy
