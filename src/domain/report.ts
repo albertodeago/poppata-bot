@@ -97,9 +97,11 @@ export const aggregateWeekly = (
 	if (feeds.length >= 2) {
 		let total = 0;
 		for (let i = 1; i < feeds.length; i++) {
-			// biome-ignore lint/style/noNonNullAssertion: bounded by length
-			total +=
-				feeds[i]!.startedAt.getTime() - feeds[i - 1]!.startedAt.getTime();
+			const prev = feeds[i - 1];
+			const cur = feeds[i];
+			if (prev && cur) {
+				total += cur.startedAt.getTime() - prev.startedAt.getTime();
+			}
 		}
 		avgFeedGapMs = Math.round(total / (feeds.length - 1));
 	}
