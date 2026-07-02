@@ -1,7 +1,22 @@
 import type { BotEnv } from "./bot";
 import { type EventEnv, LABEL } from "./event";
 import type { LoggerEnv } from "./logger";
-import { formatDuration, hhmm } from "./time";
+import {
+	aggregate,
+	aggregateWeekly,
+	formatDaily,
+	formatWeekly,
+} from "./report";
+import {
+	currentDayWindow,
+	currentWeekWindow,
+	formatDuration,
+	hhmm,
+	previousDayWindow,
+	previousWeekWindow,
+	romeNow,
+	type TimeWindow,
+} from "./time";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const INTERNAL_ERROR = "Errore interno, riprova.";
@@ -73,3 +88,68 @@ export const startCommand =
 	async (env: BotEnv): Promise<void> => {
 		await env.bot.sendMessage(chatId, `Ciao! 👋\n\n${HELP_TEXT}`);
 	};
+
+const dailyReport =
+	(chatId: number, window: TimeWindow, title: string) =>
+	async (env: EventEnv & BotEnv & LoggerEnv): Promise<void> => {
+		const evs = await env.eventRepository.listSince(
+			chatId,
+			window.start,
+			window.end,
+		);
+		if (!evs.success) {
+			env.logger.error("report: listSince failed", evs.error);
+			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+			return;
+		}
+		await env.bot.sendMessage(
+			chatId,
+			formatDaily(aggregate(evs.data, window), title),
+		);
+	};
+
+const weeklyReport =
+	(chatId: number, window: TimeWindow, title: string) =>
+	async (env: EventEnv & BotEnv & LoggerEnv): Promise<void> => {
+		const evs = await env.eventRepository.listSince(
+			chatId,
+			window.start,
+			window.end,
+		);
+		if (!evs.success) {
+			env.logger.error("report: listSince failed", evs.error);
+			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+			return;
+		}
+		await env.bot.sendMessage(
+			chatId,
+			formatWeekly(aggregateWeekly(evs.data, window), title),
+		);
+	};
+
+export const oggiCommand = (chatId: number, now: Date) =>
+	dailyReport(chatId, currentDayWindow(romeNow(now)), "📊 Oggi");
+
+export const ieriCommand = (chatId: number, now: Date) =>
+	dailyReport(chatId, previousDayWindow(romeNow(now)), "📊 Ieri");
+
+export const settimanaCommand = (chatId: number, now: Date) =>
+	weeklyReport(chatId, currentWeekWindow(romeNow(now)), "📅 Questa settimana");
+
+export const sendDailyReport = (chatId: number, now: Date, babyName?: string) =>
+	dailyReport(
+		chatId,
+		previousDayWindow(romeNow(now)),
+		babyName ? `📊 Ieri — ${babyName}` : "📊 Ieri",
+	);
+
+export const sendWeeklyReport = (
+	chatId: number,
+	now: Date,
+	babyName?: string,
+) =>
+	weeklyReport(
+		chatId,
+		previousWeekWindow(romeNow(now)),
+		babyName ? `📅 Settimana scorsa — ${babyName}` : "📅 Settimana scorsa",
+	);
