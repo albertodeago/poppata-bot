@@ -94,19 +94,70 @@ describe("[GEMINI parser]", () => {
 		if (r.success) expect(r.data).toBeNull();
 	});
 
-	it("posts the schema + api key and returns null on HTTP error", async () => {
+	it("posts the schema + api key and gives up (null, no retry) on a 4xx client error", async () => {
 		const fetchMock = vi
 			.fn()
-			.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+			.mockResolvedValue({ ok: false, status: 400, json: async () => ({}) });
 		vi.stubGlobal("fetch", fetchMock);
 		const r = await makeGeminiParser(env).parse("x");
 		expect(r.success).toBe(true);
 		if (r.success) expect(r.data).toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(1); // 400 is not retryable
 		const call = fetchMock.mock.calls[0];
 		expect(call?.[0]).toContain("gemini-2.0-flash:generateContent");
 		expect(call?.[1]?.headers["x-goog-api-key"]).toBe("k");
 		const body = JSON.parse(call?.[1]?.body);
 		expect(body.generationConfig.responseMimeType).toBe("application/json");
 		expect(body.generationConfig.responseSchema.required).toContain("type");
+	});
+
+	it("retries on 429 (rate limit) and succeeds on a later attempt", async () => {
+		const rateLimited = { ok: false, status: 429, json: async () => ({}) };
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(rateLimited)
+			.mockResolvedValueOnce(rateLimited)
+			.mockResolvedValueOnce(
+				geminiOk({ type: "pee", action: "instant", confidence: 0.9 }),
+			);
+		vi.stubGlobal("fetch", fetchMock);
+		const r = await makeGeminiParser(env, { delayMs: 0 }).parse("pisho");
+		expect(r.success).toBe(true);
+		if (r.success)
+			expect(r.data).toEqual({
+				type: "pee",
+				action: "instant",
+				confidence: 0.9,
+			});
+		expect(fetchMock).toHaveBeenCalledTimes(3);
+	});
+
+	it("gives up with null after exhausting retries on repeated 5xx", async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
+		vi.stubGlobal("fetch", fetchMock);
+		const r = await makeGeminiParser(env, { delayMs: 0 }).parse("x");
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data).toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(3); // 1 attempt + 2 retries
+	});
+
+	it("retries when fetch itself throws (network error)", async () => {
+		const fetchMock = vi
+			.fn()
+			.mockRejectedValueOnce(new Error("ECONNRESET"))
+			.mockResolvedValueOnce(
+				geminiOk({ type: "poop", action: "instant", confidence: 0.7 }),
+			);
+		vi.stubGlobal("fetch", fetchMock);
+		const r = await makeGeminiParser(env, { delayMs: 0 }).parse("x");
+		if (r.success)
+			expect(r.data).toEqual({
+				type: "poop",
+				action: "instant",
+				confidence: 0.7,
+			});
+		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 });

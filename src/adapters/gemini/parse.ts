@@ -36,13 +36,31 @@ interface RawGemini {
 	confidence: number;
 }
 
+/** Outcome of a single attempt: a definitive result, or a transient failure to retry. */
+type Attempt = { retry: false; result: GeminiParse | null } | { retry: true };
+
+export interface GeminiRetryOptions {
+	/** Number of retries after the first attempt (default 2 → up to 3 tries). */
+	retries?: number;
+	/** Base backoff between retries in ms; the nth retry waits base×n (default 400). */
+	delayMs?: number;
+}
+
+const sleep = (ms: number): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, ms));
+
 export const makeGeminiParser = (
 	env: ConfigEnv & LoggerEnv,
-): ParserEnv["parser"] => ({
-	parse: async (text) => {
+	opts: GeminiRetryOptions = {},
+): ParserEnv["parser"] => {
+	const retries = opts.retries ?? 2;
+	const delayMs = opts.delayMs ?? 400;
+
+	const attempt = async (text: string): Promise<Attempt> => {
+		let res: Response;
 		try {
 			const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.config.geminiModel}:generateContent`;
-			const res = await fetch(url, {
+			res = await fetch(url, {
 				method: "POST",
 				headers: {
 					"content-type": "application/json",
@@ -56,17 +74,29 @@ export const makeGeminiParser = (
 					},
 				}),
 			});
-			if (!res.ok) {
-				env.logger.error(`Gemini HTTP ${res.status}`);
-				return success(null);
+		} catch (e) {
+			env.logger.warn("Gemini fetch failed, will retry", e);
+			return { retry: true };
+		}
+
+		if (!res.ok) {
+			// 429 (rate limit) and 5xx are transient → retry; other 4xx won't improve.
+			if (res.status === 429 || res.status >= 500) {
+				env.logger.warn(`Gemini HTTP ${res.status}, will retry`);
+				return { retry: true };
 			}
+			env.logger.error(`Gemini HTTP ${res.status}`);
+			return { retry: false, result: null };
+		}
+
+		try {
 			const data = await res.json();
 			const raw: string | undefined =
 				data?.candidates?.[0]?.content?.parts?.[0]?.text;
-			if (!raw) return success(null);
+			if (!raw) return { retry: false, result: null };
 
 			const parsed = JSON.parse(raw) as RawGemini;
-			if (parsed.type === "other") return success(null);
+			if (parsed.type === "other") return { retry: false, result: null };
 
 			const result: GeminiParse = {
 				type: parsed.type as GeminiParse["type"],
@@ -80,10 +110,22 @@ export const makeGeminiParser = (
 				result.hour = parsed.hour;
 				result.minute = typeof parsed.minute === "number" ? parsed.minute : 0;
 			}
-			return success(result);
+			return { retry: false, result };
 		} catch (e) {
-			env.logger.error("Gemini parse failed", e);
-			return success(null);
+			env.logger.error("Gemini response parse failed", e);
+			return { retry: false, result: null };
 		}
-	},
-});
+	};
+
+	return {
+		parse: async (text) => {
+			for (let i = 0; i <= retries; i++) {
+				const outcome = await attempt(text);
+				if (!outcome.retry) return success(outcome.result);
+				if (i < retries) await sleep(delayMs * (i + 1));
+			}
+			env.logger.error(`Gemini failed after ${retries + 1} attempts`);
+			return success(null);
+		},
+	};
+};
