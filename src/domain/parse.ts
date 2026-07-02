@@ -81,15 +81,98 @@ const detectTime = (
 	return undefined;
 };
 
+/** True iff the two strings are within Levenshtein edit distance 1. */
+const withinDistanceOne = (a: string, b: string): boolean => {
+	if (a === b) return true;
+	if (Math.abs(a.length - b.length) > 1) return false;
+	if (a.length === b.length) {
+		let diffs = 0;
+		for (let i = 0; i < a.length; i++) {
+			if (a[i] !== b[i] && ++diffs > 1) return false;
+		}
+		return true; // exactly one substitution (0 handled above)
+	}
+	// lengths differ by 1: is `short` obtainable by deleting one char from `long`?
+	const short = a.length < b.length ? a : b;
+	const long = a.length < b.length ? b : a;
+	let i = 0;
+	let j = 0;
+	let skipped = false;
+	while (i < short.length && j < long.length) {
+		if (short[i] === long[j]) {
+			i++;
+			j++;
+		} else {
+			if (skipped) return false;
+			skipped = true;
+			j++;
+		}
+	}
+	return true;
+};
+
+// Common Italian words within 1 edit of a keyword that must NOT be typo-matched
+// (same first letter, so the first-letter guard doesn't exclude them).
+const FUZZY_STOP = new Set([
+	"nonna", // ~ nanna
+	"nonno",
+	"caccia", // ~ cacca
+	"pupa", // ~ pupu
+	"cacao", // (already distance ≥2, listed for clarity)
+	"piscina",
+]);
+
+// Curated, distinctive keywords per type for typo tolerance. Short/common words
+// with high collision risk are intentionally left out (they still match exactly
+// via the regexes above).
+const FUZZY_TYPES: ReadonlyArray<readonly [EventType, readonly string[]]> = [
+	["eat", ["poppata", "allattamento", "poppa"]],
+	["sleep", ["nanna", "sonnellino", "dorme"]],
+	["pee", ["pipi", "piscio", "pisciata"]],
+	["poop", ["cacca", "cacata", "popo", "pupu"]],
+];
+
+/**
+ * Typo-tolerant type detection for a single token. Requires: length ≥ 4, not a
+ * stop-word, same first letter as the keyword, and Levenshtein ≤ 1. Returns the
+ * type only when EXACTLY one category is in range — an ambiguous token like
+ * `pipo` (1 edit from both `pipi` and `popo`) yields `undefined` rather than a guess.
+ */
+const fuzzyType = (token: string): EventType | undefined => {
+	if (token.length < 4 || FUZZY_STOP.has(token)) return undefined;
+	const hits = new Set<EventType>();
+	for (const [type, words] of FUZZY_TYPES) {
+		for (const w of words) {
+			if (w[0] === token[0] && withinDistanceOne(token, w)) {
+				hits.add(type);
+				break;
+			}
+		}
+	}
+	return hits.size === 1 ? [...hits][0] : undefined;
+};
+
 /**
  * Rules parser over already-normalized text. `confidence` is 1 when a type is
  * found or an explicit `end` is present; otherwise 0 (caller falls back to Gemini).
+ * When the exact/stem regexes miss a type, a Levenshtein-≤1 fallback tolerates typos.
  */
 export const parseRules = (text: string): ParsedTokens => {
-	const type = detectType(text);
+	let type = detectType(text);
 	const time = detectTime(text);
 	const hasEnd = END.test(text);
 	const hasStart = START.test(text);
+
+	// Typo tolerance: only when the exact/stem pass found no type.
+	if (type === undefined) {
+		for (const token of text.split(/\s+/)) {
+			const fuzzy = fuzzyType(token);
+			if (fuzzy) {
+				type = fuzzy;
+				break;
+			}
+		}
+	}
 
 	let action: Action | undefined;
 	if (type === "pee" || type === "poop") action = "instant";

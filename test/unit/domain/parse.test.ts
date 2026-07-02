@@ -97,6 +97,27 @@ describe("[PARSE] parseRules", () => {
 			input: "cacata",
 			expect: { type: "poop", action: "instant", confidence: 1 },
 		},
+		// typo tolerance (Levenshtein ≤ 1)
+		{
+			input: "pili",
+			expect: { type: "pee", action: "instant", confidence: 1 },
+		},
+		{
+			input: "popata",
+			expect: { type: "eat", action: "start", confidence: 1 },
+		},
+		{
+			input: "caca",
+			expect: { type: "poop", action: "instant", confidence: 1 },
+		},
+		{
+			input: "inisio poppata dx 9.15",
+			expect: { type: "eat", action: "start", side: "dx", confidence: 1 },
+		},
+		// typo ambiguity + stop-words must NOT be guessed
+		{ input: "pipo", expect: { confidence: 0 } }, // 1 edit from pipi AND popo
+		{ input: "popi", expect: { confidence: 0 } }, // idem
+		{ input: "nonna", expect: { confidence: 0 } }, // stop-word (~ nanna)
 		// false-positive guards (must NOT be parsed as pee/poop)
 		{ input: "andiamo in piscina", expect: { confidence: 0 } },
 		{ input: "un po di cacao", expect: { confidence: 0 } },
