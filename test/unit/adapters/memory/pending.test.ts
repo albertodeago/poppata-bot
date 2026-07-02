@@ -14,6 +14,7 @@ const newPending = (): NewPendingConfirmation => ({
 	chatId: 1,
 	userId: 1,
 	userName: "a",
+	rawText: "inizio poppata 9",
 	intent: {
 		type: "eat",
 		action: "start",

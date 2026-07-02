@@ -6,6 +6,7 @@ export interface PendingConfirmation {
 	chatId: number;
 	userId: number;
 	userName: string;
+	rawText: string;
 	intent: Intent;
 	warning: string;
 	/** The original user message this confirmation is about. */

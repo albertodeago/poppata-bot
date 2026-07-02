@@ -135,6 +135,7 @@ const createPending = async (
 		chatId: ctx.chatId,
 		userId: ctx.userId,
 		userName: ctx.userName,
+		rawText: ctx.rawText,
 		intent,
 		warning,
 		messageId: ctx.messageId,
@@ -235,7 +236,7 @@ export const handleCallback =
 			userId: p.userId,
 			userName: p.userName,
 			messageId: p.messageId,
-			rawText: p.warning,
+			rawText: p.rawText,
 		};
 		const applied = await applyIntent(p.intent, ctx)(env);
 		if (!applied.success) {
