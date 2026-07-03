@@ -23,7 +23,7 @@ const INTERNAL_ERROR = "Errore interno, riprova.";
 
 export const HELP_TEXT = [
 	"👶 poppata-bot — cosa capisco:",
-	'• "inizio poppata dx 9.15" — inizio poppata (dx/sx) alle 9:15',
+	'• "inizio poppata dx 9.15" — inizio poppata (dx/sx, o destro/sinistro; se manca te lo chiedo) alle 9:15',
 	'• "fine 9.40" — chiude la sessione aperta alle 9:40',
 	'• "nanna 10" / "fine 10.15" — inizio/fine nanna',
 	'• "pipì" / "cacca" — eventi istantanei',

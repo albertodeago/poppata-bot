@@ -70,6 +70,7 @@ fine 9.40                  # → "durata poppata: 25m"
 pipì                       # → 👍
 conf                       # → press the last [Conferma] button
 ann                        # → press the last [Annulla] button
+sx / dx                    # → tap the [Sinistro] / [Destro] side button
 @mamma nanna 22            # → override the sender name
 !23:50 fine                # → override the message arrival time
 /oggi  /ieri  /settimana  /annulla  /help

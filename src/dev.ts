@@ -104,8 +104,9 @@ const handleLine = async (line: string): Promise<void> => {
 	const trimmed = line.trim();
 	if (!trimmed) return;
 
-	if (trimmed === "conf" || trimmed === "ann") {
-		if (!state.lastPendingId) {
+	if (["conf", "ann", "dx", "sx"].includes(trimmed)) {
+		const pendingId = state.lastPendingId;
+		if (!pendingId) {
 			console.log("   (nessuna conferma in sospeso)");
 			return;
 		}
@@ -114,10 +115,12 @@ const handleLine = async (line: string): Promise<void> => {
 			chatId: DEV_CHAT_ID,
 			userId: DEV_USER_ID,
 			userName: "papà",
-			data: `${trimmed}:${state.lastPendingId}`,
+			data: `${trimmed}:${pendingId}`,
 			messageId: state.lastConfirmationMessageId ?? 0,
 		})(env);
-		state.lastPendingId = undefined;
+		// A callback may open a NEW prompt (e.g. conf → side prompt), which the
+		// console adapter records in state.lastPendingId. Only clear when unchanged.
+		if (state.lastPendingId === pendingId) state.lastPendingId = undefined;
 		return;
 	}
 
@@ -140,7 +143,7 @@ const handleLine = async (line: string): Promise<void> => {
 };
 
 console.log(
-	'poppata-bot dev:local — scrivi messaggi (es. "inizio poppata dx 9.15"), /comandi, o conf/ann. Ctrl+D per uscire.',
+	'poppata-bot dev:local — scrivi messaggi (es. "inizio poppata dx 9.15"), /comandi, o conf/ann/sx/dx. Ctrl+D per uscire.',
 );
 
 const rl = createInterface({ input: process.stdin });
