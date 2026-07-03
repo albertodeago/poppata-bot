@@ -22,16 +22,24 @@ export default async function handler(
 		const babyName = env.config.babyName;
 		const now = new Date();
 		const isMonday = romeNow(now).weekday === 1;
+		const chatIds = env.config.allowedChatIds;
+
+		env.logger.info(
+			`Cron report starting: ${chatIds.length} chat(s), weekly=${isMonday}`,
+		);
 
 		// Each allow-listed chat gets its own report from its own data.
-		for (const chatId of env.config.allowedChatIds) {
+		for (const chatId of chatIds) {
+			env.logger.info(`Cron: sending reports to chat ${chatId}`);
 			await sendDailyReport(chatId, now, babyName)(env);
 			if (isMonday) {
 				await sendWeeklyReport(chatId, now, babyName)(env);
 			}
+			env.logger.info(`Cron: reports sent to chat ${chatId}`);
 		}
 		await env.pendingRepository.deleteStale(new Date(now.getTime() - DAY_MS));
 
+		env.logger.info(`Cron report done: ${chatIds.length} chat(s)`);
 		return res.status(200).json({ ok: true });
 	} catch (error) {
 		console.error("Cron report error:", error);
