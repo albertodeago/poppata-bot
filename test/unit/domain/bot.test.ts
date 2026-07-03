@@ -628,6 +628,7 @@ describe("[BOT] handleCallback", () => {
 		mocks.pendingRepository.create.mockImplementation(async (p) =>
 			success({ ...p, id: "ps9", createdAt: new Date() }),
 		);
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
 		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
 
 		await handleCallback(cb("eat:pt1"))(env);
@@ -640,5 +641,92 @@ describe("[BOT] handleCallback", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
 		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+	});
+
+	it("nanna button asks to confirm when a session is already open", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(typePromptPending("pt1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pc1", createdAt: new Date() }),
+		);
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+
+		await handleCallback(cb("sleep:pt1"))(env);
+
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("aperta"),
+			"pc1",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+	});
+
+	it("poppata button asks to confirm when a session is already open", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(typePromptPending("pt1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pc2", createdAt: new Date() }),
+		);
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+
+		await handleCallback(cb("eat:pt1"))(env);
+
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("aperta"),
+			"pc2",
+		);
+		expect(mocks.bot.sendSidePrompt).not.toHaveBeenCalled();
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
+	});
+
+	it("confirming the close ends the open session and starts the new one", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(
+				pending({
+					rawText: "inizio",
+					intent: {
+						type: "sleep",
+						action: "start",
+						at: new Date("2026-07-02T09:15:00+02:00"),
+						source: "rules",
+						confidence: 1,
+					},
+					warning:
+						"C'è già una poppata aperta dalle 9:00. Chiuderla alle 9:15 e iniziare nanna?",
+				}),
+			),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+		mocks.eventRepository.closeSession.mockImplementation(async (_id, endedAt) =>
+			success({ ...openEat, endedAt }),
+		);
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		expect(mocks.eventRepository.closeSession).toHaveBeenCalledWith(
+			"s1",
+			new Date("2026-07-02T09:15:00+02:00"),
+		);
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.type).toBe("sleep");
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Nanna iniziata alle 9:15 ✅",
+		);
 	});
 });

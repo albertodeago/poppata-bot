@@ -370,9 +370,26 @@ export const handleCallback =
 		}
 
 		// Type buttons: the verb is authoritative (the stored placeholder type is
-		// ignored). eat → chain to the side prompt; sleep → save directly.
+		// ignored). Gate through decide so a start over an open session asks before
+		// closing it (consistent with the text path); otherwise eat → side prompt,
+		// sleep → save directly.
 		if (verb === "eat" || verb === "sleep") {
 			const intent: Intent = { ...p.intent, type: verb };
+			const openRes = await env.eventRepository.findOpenSession(ctx.chatId);
+			if (!openRes.success) {
+				env.logger.error("findOpenSession (type) failed", openRes.error);
+				await env.bot.answerCallback(cb.id, "Errore");
+				return;
+			}
+			const decision = decide(intent, openRes.data);
+			if (decision.kind === "confirm") {
+				await createPending(env, ctx, decision.intent, decision.warning);
+				await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+				await env.pendingRepository.delete(p.id);
+				await env.bot.answerCallback(cb.id);
+				return;
+			}
+			// decision.kind === "save" (decide returns "error" only for end intents).
 			if (needsSide(intent)) {
 				await promptSide(env, ctx, intent, cb.at);
 				await env.bot.clearKeyboard(cb.chatId, cb.messageId);
