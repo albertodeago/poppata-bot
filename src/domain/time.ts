@@ -10,6 +10,9 @@ export interface TimeWindow {
 export const romeNow = (at: Date): DateTime =>
 	DateTime.fromJSDate(at).setZone(ZONE);
 
+/** Rome-local calendar day as yyyy-MM-dd (the storage key for a weight). */
+export const romeDay = (at: Date): string => romeNow(at).toFormat("yyyy-MM-dd");
+
 /**
  * Resolve a bare clock time to the absolute instant nearest to `arrival`
  * (am/pm disambiguation). hour >= 13 is taken as 24h; hour 0..12 also

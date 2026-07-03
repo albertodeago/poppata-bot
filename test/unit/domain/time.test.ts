@@ -7,6 +7,7 @@ import {
 	previousDayWindow,
 	previousWeekWindow,
 	resolveClock,
+	romeDay,
 	romeNow,
 	ZONE,
 } from "../../../src/domain/time.js";
@@ -85,5 +86,16 @@ describe("[TIME] windows", () => {
 		expect(
 			DateTime.fromJSDate(w.end).setZone(ZONE).toFormat("yyyy-MM-dd"),
 		).toBe("2026-06-29");
+	});
+});
+
+describe("[TIME] romeDay", () => {
+	it("returns the Rome-local calendar day as yyyy-MM-dd", () => {
+		expect(romeDay(new Date("2026-07-03T10:00:00Z"))).toBe("2026-07-03");
+	});
+
+	it("rolls to the next day past Rome midnight", () => {
+		// 23:30 UTC = 01:30 the next day in Rome (summer, +02:00)
+		expect(romeDay(new Date("2026-07-03T23:30:00Z"))).toBe("2026-07-04");
 	});
 });
