@@ -15,12 +15,15 @@ import {
 	hhmm,
 	previousDayWindow,
 	previousWeekWindow,
+	romeDay,
 	romeNow,
 	type TimeWindow,
 } from "./time.js";
+import { formatHistory, parseGrams, type WeightEnv } from "./weight.js";
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const INTERNAL_ERROR = "Errore interno, riprova.";
+const PESO_USAGE = "Usa /peso 3400 (peso in grammi).";
 
 export const HELP_TEXT = [
 	"👶 poppata-bot — cosa capisco:",
@@ -37,6 +40,7 @@ export const HELP_TEXT = [
 	"/settimana — statistiche della settimana",
 	'/annulla — rimuove l\'ultimo evento (o scrivi "annulla")',
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
+	'/peso 3400 — registra il peso di oggi (grammi); "/peso" mostra lo storico',
 	"/help — questo messaggio",
 ].join("\n");
 
@@ -83,6 +87,41 @@ export const annullaCommand =
 			chatId,
 			`Rimosso: ${LABEL[r.data.type]} delle ${hhmm(r.data.startedAt)}`,
 		);
+	};
+
+export const pesoCommand =
+	(chatId: number, userId: number, userName: string, arg: string, now: Date) =>
+	async (env: WeightEnv & BotEnv & LoggerEnv): Promise<void> => {
+		const trimmed = arg.trim();
+		if (trimmed === "") {
+			const res = await env.weightRepository.list(chatId);
+			if (!res.success) {
+				env.logger.error("peso: list failed", res.error);
+				await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+				return;
+			}
+			await env.bot.sendMessage(chatId, formatHistory(res.data));
+			return;
+		}
+		const grams = parseGrams(trimmed);
+		if (grams === null) {
+			await env.bot.sendMessage(chatId, PESO_USAGE);
+			return;
+		}
+		const res = await env.weightRepository.upsert({
+			chatId,
+			day: romeDay(now),
+			grams,
+			userId,
+			userName,
+		});
+		if (!res.success) {
+			env.logger.error("peso: upsert failed", res.error);
+			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+			return;
+		}
+		const note = res.data.overwritten ? " (aggiornato)" : "";
+		await env.bot.sendMessage(chatId, `⚖️ Peso di oggi: ${grams} g${note}`);
 	};
 
 export const helpCommand =

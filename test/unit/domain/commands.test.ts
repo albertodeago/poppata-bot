@@ -5,6 +5,7 @@ import {
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
+	pesoCommand,
 	sendDailyReport,
 	sendWeeklyReport,
 	senoCommand,
@@ -13,6 +14,7 @@ import {
 } from "../../../src/domain/commands.js";
 import type { BabyEvent } from "../../../src/domain/event.js";
 import { success } from "../../../src/domain/result.js";
+import { romeDay } from "../../../src/domain/time.js";
 import { makeTestEnv } from "../testEnv.js";
 
 const openEat: BabyEvent = {
@@ -185,5 +187,93 @@ describe("[COMMANDS] /seno", () => {
 		await senoCommand(1, new Date("2026-07-02T15:00:00Z"))(env);
 		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
 		expect(text).toContain("Ultima poppata: seno destro");
+	});
+});
+
+describe("[COMMANDS] /peso", () => {
+	it("HELP_TEXT lists the /peso command", () => {
+		expect(HELP_TEXT).toContain("/peso");
+	});
+
+	it("records today's weight and confirms it", async () => {
+		const { env, mocks } = makeTestEnv();
+		const now = new Date("2026-07-03T10:00:00Z");
+		mocks.weightRepository.upsert.mockResolvedValue(
+			success({
+				reading: {
+					id: "w1",
+					chatId: 1,
+					day: romeDay(now),
+					grams: 3400,
+					userId: 1,
+					userName: "papà",
+					createdAt: now,
+				},
+				overwritten: false,
+			}),
+		);
+		await pesoCommand(1, 1, "papà", "3400", now)(env);
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"⚖️ Peso di oggi: 3400 g",
+		);
+		expect(mocks.weightRepository.upsert).toHaveBeenCalledWith(
+			expect.objectContaining({ chatId: 1, grams: 3400, day: romeDay(now) }),
+		);
+	});
+
+	it("notes when it overwrote an existing reading", async () => {
+		const { env, mocks } = makeTestEnv();
+		const now = new Date("2026-07-03T10:00:00Z");
+		mocks.weightRepository.upsert.mockResolvedValue(
+			success({
+				reading: {
+					id: "w1",
+					chatId: 1,
+					day: romeDay(now),
+					grams: 3400,
+					userId: 1,
+					userName: "papà",
+					createdAt: now,
+				},
+				overwritten: true,
+			}),
+		);
+		await pesoCommand(1, 1, "papà", "3400", now)(env);
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"⚖️ Peso di oggi: 3400 g (aggiornato)",
+		);
+	});
+
+	it("rejects an out-of-band value without saving", async () => {
+		const { env, mocks } = makeTestEnv();
+		await pesoCommand(1, 1, "papà", "340", new Date())(env);
+		expect(mocks.weightRepository.upsert).not.toHaveBeenCalled();
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Usa /peso 3400 (peso in grammi).",
+		);
+	});
+
+	it("shows the history when called with no argument", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.weightRepository.list.mockResolvedValue(
+			success([
+				{
+					id: "w1",
+					chatId: 1,
+					day: "2026-07-01",
+					grams: 3200,
+					userId: 1,
+					userName: "papà",
+					createdAt: new Date("2026-07-01T09:00:00Z"),
+				},
+			]),
+		);
+		await pesoCommand(1, 1, "papà", "", new Date())(env);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("⚖️ Peso");
+		expect(text).toContain("3200 g");
 	});
 });

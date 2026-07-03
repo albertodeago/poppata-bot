@@ -4,6 +4,7 @@ import type { EventEnv } from "../../src/domain/event.js";
 import type { LoggerEnv } from "../../src/domain/logger.js";
 import type { ParserEnv } from "../../src/domain/parse.js";
 import type { PendingEnv } from "../../src/domain/pending.js";
+import type { WeightEnv } from "../../src/domain/weight.js";
 
 export const makeTestEnv = () => {
 	const mocks = {
@@ -14,6 +15,10 @@ export const makeTestEnv = () => {
 			closeSession: vi.fn<EventEnv["eventRepository"]["closeSession"]>(),
 			deleteLast: vi.fn<EventEnv["eventRepository"]["deleteLast"]>(),
 			listSince: vi.fn<EventEnv["eventRepository"]["listSince"]>(),
+		},
+		weightRepository: {
+			upsert: vi.fn<WeightEnv["weightRepository"]["upsert"]>(),
+			list: vi.fn<WeightEnv["weightRepository"]["list"]>(),
 		},
 		pendingRepository: {
 			create: vi.fn<PendingEnv["pendingRepository"]["create"]>(),
@@ -40,8 +45,14 @@ export const makeTestEnv = () => {
 		},
 	};
 
-	const env: BotEnv & EventEnv & PendingEnv & ParserEnv & LoggerEnv = {
+	const env: BotEnv &
+		EventEnv &
+		PendingEnv &
+		ParserEnv &
+		WeightEnv &
+		LoggerEnv = {
 		eventRepository: mocks.eventRepository,
+		weightRepository: mocks.weightRepository,
 		pendingRepository: mocks.pendingRepository,
 		parser: mocks.parser,
 		bot: mocks.bot,
