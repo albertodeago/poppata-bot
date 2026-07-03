@@ -207,7 +207,9 @@ describe("[BOT] handleMessage", () => {
 		await handleMessage(msg("boh vediamo"))(env);
 
 		const text = mocks.bot.sendConfirmation.mock.calls[0]?.[1] ?? "";
-		expect(text).toContain("la chiudo");
+		expect(text).toContain(
+			"C'è già una poppata aperta dalle 9:00, la chiudo alle 9:30.",
+		);
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
 
