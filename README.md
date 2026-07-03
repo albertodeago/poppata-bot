@@ -18,7 +18,6 @@ Single baby, single allow-listed group chat.
 
 ## Roadmap
 
-- track peso
 - how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side)
 ? annulla should work even without `/` command
 ? "inizio" without any information should ask with buttons if is a poppata or a nanna
@@ -47,7 +46,7 @@ Free-text messages (Italian first; Gemini best-effort for anything the rules mis
 
 ### Commands
 
-`/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/annulla` (undo last event) · `/help` · `/start`
+`/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help` · `/start`
 
 ### Reports
 
@@ -72,6 +71,7 @@ Then type messages, one per line:
 inizio poppata dx 9.15     # → 👍 reaction
 fine 9.40                  # → "durata poppata: 25m"
 /stato                     # → run a command
+/peso 3400                 # → registra il peso di oggi; "/peso" mostra lo storico
 pipì                       # → 👍
 conf                       # → press the last [Conferma] button
 ann                        # → press the last [Annulla] button
@@ -216,10 +216,10 @@ api/                      Vercel serverless functions
 src/
   domain/                 pure core — no I/O, no framework imports
     result.ts logger.ts time.ts
-    event.ts parse.ts pending.ts session.ts report.ts
+    event.ts parse.ts pending.ts session.ts report.ts weight.ts
     bot.ts commands.ts db.ts
   adapters/               port implementations
-    pg/{event,pending}.ts db/pool.ts
+    pg/{event,pending,weight}.ts db/pool.ts
     telegraf/bot.ts gemini/parse.ts
     memory/* console/* noop/*   (used by dev:local + tests)
   config.ts env.ts dev.ts

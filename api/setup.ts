@@ -8,6 +8,7 @@ const COMMANDS = [
 	{ command: "settimana", description: "Statistiche della settimana" },
 	{ command: "annulla", description: "Rimuove l'ultimo evento" },
 	{ command: "seno", description: "Ultimo seno usato" },
+	{ command: "peso", description: "Peso: registra o mostra lo storico" },
 	{ command: "help", description: "Aiuto" },
 ];
 

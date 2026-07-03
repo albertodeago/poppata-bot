@@ -3,6 +3,7 @@ import { makeConsoleBot } from "./adapters/console/bot.js";
 import { makeLogger } from "./adapters/console/logger.js";
 import { makeMemoryEventRepository } from "./adapters/memory/event.js";
 import { makeMemoryPendingRepository } from "./adapters/memory/pending.js";
+import { makeMemoryWeightRepository } from "./adapters/memory/weight.js";
 import { makeNoopParser } from "./adapters/noop/parser.js";
 import {
 	type BotEnv,
@@ -15,6 +16,7 @@ import {
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
+	pesoCommand,
 	sendDailyReport,
 	sendWeeklyReport,
 	senoCommand,
@@ -26,19 +28,22 @@ import type { EventEnv } from "./domain/event.js";
 import type { LoggerEnv } from "./domain/logger.js";
 import type { ParserEnv } from "./domain/parse.js";
 import type { PendingEnv } from "./domain/pending.js";
+import type { WeightEnv } from "./domain/weight.js";
 
 const DEV_CHAT_ID = 1;
 const DEV_USER_ID = 1;
 
 const logger = makeLogger();
 const { botEnv, state } = makeConsoleBot({ logger });
-const env: BotEnv & EventEnv & PendingEnv & ParserEnv & LoggerEnv = {
-	logger,
-	eventRepository: makeMemoryEventRepository({ logger }),
-	pendingRepository: makeMemoryPendingRepository({ logger }),
-	parser: makeNoopParser(),
-	...botEnv,
-};
+const env: BotEnv & EventEnv & PendingEnv & ParserEnv & WeightEnv & LoggerEnv =
+	{
+		logger,
+		eventRepository: makeMemoryEventRepository({ logger }),
+		weightRepository: makeMemoryWeightRepository({ logger }),
+		pendingRepository: makeMemoryPendingRepository({ logger }),
+		parser: makeNoopParser(),
+		...botEnv,
+	};
 
 let msgSeq = 0;
 
@@ -126,6 +131,12 @@ const handleLine = async (line: string): Promise<void> => {
 		// A callback may open a NEW prompt (e.g. conf → side prompt), which the
 		// console adapter records in state.lastPendingId. Only clear when unchanged.
 		if (state.lastPendingId === pendingId) state.lastPendingId = undefined;
+		return;
+	}
+
+	if (trimmed === "/peso" || trimmed.startsWith("/peso ")) {
+		const arg = trimmed.slice("/peso".length).trim();
+		await pesoCommand(DEV_CHAT_ID, DEV_USER_ID, "papà", arg, new Date())(env);
 		return;
 	}
 

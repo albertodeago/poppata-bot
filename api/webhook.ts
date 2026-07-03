@@ -10,6 +10,7 @@ import {
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
+	pesoCommand,
 	senoCommand,
 	settimanaCommand,
 	startCommand,
@@ -53,6 +54,16 @@ const initBot = (): void => {
 	});
 	bot.command("seno", async (ctx) => {
 		await senoCommand(ctx.chat.id, new Date())(env);
+	});
+	bot.command("peso", async (ctx) => {
+		const arg = ctx.message.text.replace(/^\/peso(@\S+)?\s*/, "");
+		await pesoCommand(
+			ctx.chat.id,
+			ctx.from.id,
+			senderName(ctx.from),
+			arg,
+			new Date(),
+		)(env);
 	});
 
 	bot.on("text", async (ctx) => {

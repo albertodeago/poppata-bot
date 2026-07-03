@@ -5,6 +5,7 @@ import { makePgPool } from "./adapters/db/pool.js";
 import { makeGeminiParser } from "./adapters/gemini/parse.js";
 import { makePgEventRepository } from "./adapters/pg/event.js";
 import { makePgPendingRepository } from "./adapters/pg/pending.js";
+import { makePgWeightRepository } from "./adapters/pg/weight.js";
 import { makeTelegrafAdapter } from "./adapters/telegraf/bot.js";
 import { type ConfigEnv, getConfig } from "./config.js";
 import type { BotEnv } from "./domain/bot.js";
@@ -13,6 +14,7 @@ import type { EventEnv } from "./domain/event.js";
 import type { LoggerEnv } from "./domain/logger.js";
 import type { ParserEnv } from "./domain/parse.js";
 import type { PendingEnv } from "./domain/pending.js";
+import type { WeightEnv } from "./domain/weight.js";
 
 type InfraEnv = {
 	telegrafBot: Telegraf;
@@ -25,6 +27,7 @@ export type Env = LoggerEnv &
 	EventEnv &
 	PendingEnv &
 	ParserEnv &
+	WeightEnv &
 	BotEnv &
 	InfraEnv;
 
@@ -33,6 +36,7 @@ export const makeEnv = (): Env => {
 	const config = getConfig();
 	const db = makePgPool({ config, logger });
 	const eventRepository = makePgEventRepository({ db, logger });
+	const weightRepository = makePgWeightRepository({ db, logger });
 	const pendingRepository = makePgPendingRepository({ db, logger });
 	const parser = makeGeminiParser({ config, logger });
 	const telegraf = makeTelegrafAdapter()({ config, logger });
@@ -42,6 +46,7 @@ export const makeEnv = (): Env => {
 		config,
 		db,
 		eventRepository,
+		weightRepository,
 		pendingRepository,
 		parser,
 		...telegraf.botEnv,
