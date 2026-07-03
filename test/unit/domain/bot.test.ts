@@ -124,6 +124,7 @@ describe("[BOT] handleMessage", () => {
 	it("asks for the side when a feed start has no side (no time)", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
 		mocks.pendingRepository.create.mockImplementation(async (p) =>
 			success({ ...p, id: "ps1", createdAt: new Date() }),
 		);
@@ -141,6 +142,7 @@ describe("[BOT] handleMessage", () => {
 	it("asks for the side when a feed start has a time but no side", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
 		mocks.pendingRepository.create.mockImplementation(async (p) =>
 			success({ ...p, id: "ps2", createdAt: new Date() }),
 		);
@@ -237,6 +239,73 @@ describe("[BOT] handleMessage", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 		expect(mocks.parser.parse).not.toHaveBeenCalled();
 	});
+
+	it("appends the last-side hint to the side prompt", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.findLastFeed.mockResolvedValue(
+			success({
+				id: "e1",
+				chatId: 1,
+				userId: 1,
+				userName: "papà",
+				type: "eat",
+				side: "dx",
+				startedAt: new Date("2026-07-02T07:00:00+02:00"),
+				endedAt: new Date("2026-07-02T07:20:00+02:00"),
+				source: "rules",
+				rawText: "poppata dx",
+				messageId: 1,
+				createdAt: new Date("2026-07-02T07:20:00+02:00"),
+			}),
+		);
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("poppata"))(env);
+
+		const text = mocks.bot.sendSidePrompt.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Per quale seno?");
+		expect(text).toContain("(ultima: destro");
+	});
+
+	it("omits the hint when there is no prior feed", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("poppata"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			"Per quale seno? 🤱",
+			"ps1",
+		);
+	});
+
+	it("still prompts when the last-feed lookup fails", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.findLastFeed.mockResolvedValue({
+			success: false,
+			error: new Error("db down"),
+		});
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("poppata"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			"Per quale seno? 🤱",
+			"ps1",
+		);
+	});
 });
 
 const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({
@@ -265,7 +334,8 @@ describe("[BOT] handleCallback", () => {
 		userId: 1,
 		userName: "papà",
 		data,
-		messageId: 200, // the confirmation message
+		messageId: 200,
+		at: new Date("2026-07-02T09:30:00+02:00"),
 	});
 
 	it("confirm applies the intent, reacts, clears keyboard, deletes pending", async () => {
@@ -390,6 +460,7 @@ describe("[BOT] handleCallback", () => {
 		mocks.pendingRepository.create.mockImplementation(async (p) =>
 			success({ ...p, id: "ps2", createdAt: new Date() }),
 		);
+		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
 
 		await handleCallback(cb("conf:p1"))(env);
 

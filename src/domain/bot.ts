@@ -6,7 +6,7 @@ import {
 	type NewBabyEvent,
 	SIDE_LABEL,
 } from "./event.js";
-import { answerLastFeed, LAST_FEED_QUERY } from "./lastFeed.js";
+import { answerLastFeed, LAST_FEED_QUERY, lastFeedHint } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
 import { type Intent, normalize, type ParserEnv, parseRules } from "./parse.js";
 import type { PendingConfirmation, PendingEnv } from "./pending.js";
@@ -50,6 +50,7 @@ export interface IncomingCallback {
 	userName: string;
 	data: string;
 	messageId: number;
+	at: Date;
 }
 
 export interface EventContext {
@@ -161,10 +162,16 @@ const createPending = async (
 };
 
 const promptSide = async (
-	env: BotEnv & PendingEnv & LoggerEnv,
+	env: BotEnv & EventEnv & PendingEnv & LoggerEnv,
 	ctx: EventContext,
 	intent: Intent,
+	now: Date,
 ): Promise<void> => {
+	const lastRes = await env.eventRepository.findLastFeed(ctx.chatId);
+	if (!lastRes.success) {
+		env.logger.error("promptSide: findLastFeed failed", lastRes.error);
+	}
+	const hint = lastRes.success ? lastFeedHint(lastRes.data, now) : "";
 	const created = await env.pendingRepository.create({
 		chatId: ctx.chatId,
 		userId: ctx.userId,
@@ -179,7 +186,11 @@ const promptSide = async (
 		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
 		return;
 	}
-	await env.bot.sendSidePrompt(ctx.chatId, SIDE_PROMPT, created.data.id);
+	await env.bot.sendSidePrompt(
+		ctx.chatId,
+		`${SIDE_PROMPT}${hint}`,
+		created.data.id,
+	);
 };
 
 const sendDurationReply = async (
@@ -306,7 +317,7 @@ export const handleCallback =
 
 		// verb === "conf": a confirmed feed start still missing its side asks for it.
 		if (needsSide(p.intent)) {
-			await promptSide(env, ctx, p.intent);
+			await promptSide(env, ctx, p.intent, cb.at);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -428,7 +439,7 @@ export const handleMessage =
 				return;
 			case "save":
 				if (needsSide(decision.intent)) {
-					await promptSide(env, ctx, decision.intent);
+					await promptSide(env, ctx, decision.intent, msg.at);
 					return;
 				}
 				await save(env, ctx, decision.intent, timeGiven);

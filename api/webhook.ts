@@ -77,6 +77,7 @@ const initBot = (): void => {
 			userName: senderName(ctx.from),
 			data: ctx.callbackQuery.data,
 			messageId: ctx.callbackQuery.message?.message_id ?? 0,
+			at: new Date(),
 		};
 		await handleCallback(cb)(env);
 	});

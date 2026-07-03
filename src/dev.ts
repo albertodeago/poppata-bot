@@ -121,6 +121,7 @@ const handleLine = async (line: string): Promise<void> => {
 			userName: "papà",
 			data: `${trimmed}:${pendingId}`,
 			messageId: state.lastConfirmationMessageId ?? 0,
+			at: new Date(),
 		})(env);
 		// A callback may open a NEW prompt (e.g. conf → side prompt), which the
 		// console adapter records in state.lastPendingId. Only clear when unchanged.
