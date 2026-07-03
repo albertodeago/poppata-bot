@@ -7,7 +7,8 @@ const INTERNAL_ERROR = "Errore interno, riprova.";
 const NO_FEED = "Non ho ancora registrato una poppata con un seno.";
 
 /** Matches a query word immediately before seno/tetta on normalized text. */
-export const LAST_FEED_QUERY = /\b(che|quale|qual|ultimo|ultima)\s+(seno|tetta)\b/;
+export const LAST_FEED_QUERY =
+	/\b(che|quale|qual|ultimo|ultima)\s+(seno|tetta)\b/;
 
 /** Compact suffix for the side prompt. Empty when there's no prior feed. */
 export const lastFeedHint = (feed: BabyEvent | null, now: Date): string => {

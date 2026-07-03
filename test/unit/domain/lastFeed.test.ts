@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BabyEvent } from "../../../src/domain/event.js";
 import {
-	LAST_FEED_QUERY,
 	answerLastFeed,
 	formatLastFeed,
+	LAST_FEED_QUERY,
 	lastFeedHint,
 } from "../../../src/domain/lastFeed.js";
 import { success } from "../../../src/domain/result.js";

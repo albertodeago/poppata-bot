@@ -6,6 +6,7 @@ import {
 	type NewBabyEvent,
 	SIDE_LABEL,
 } from "./event.js";
+import { answerLastFeed, LAST_FEED_QUERY } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
 import { type Intent, normalize, type ParserEnv, parseRules } from "./parse.js";
 import type { PendingConfirmation, PendingEnv } from "./pending.js";
@@ -13,7 +14,6 @@ import type { Result } from "./result.js";
 import * as R from "./result.js";
 import { decide } from "./session.js";
 import { formatDuration, hhmm, resolveClock, romeNow } from "./time.js";
-import { LAST_FEED_QUERY, answerLastFeed } from "./lastFeed.js";
 
 export interface BotEnv {
 	bot: {
