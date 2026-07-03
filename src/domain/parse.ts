@@ -58,8 +58,8 @@ const PEE = /\b(pipi|plin|pisci[oa]\w*)\b/;
 const POOP = /\b(cacca|cacchin\w*|cacat\w*|caga\w*|pupu|popo|feci|poop)\b/;
 const START = /\b(inizio|inizia|start|comincia)\b/;
 const END = /\b(fine|finit[ao]|stop|end|basta)\b/;
-const SIDE_DX = /\b(dx|destra|right)\b/;
-const SIDE_SX = /\b(sx|sinistra|left)\b/;
+const SIDE_DX = /\b(dx|destra|destro|right)\b/;
+const SIDE_SX = /\b(sx|sinistra|sinistro|left)\b/;
 
 const detectType = (t: string): EventType | undefined => {
 	if (EAT.test(t)) return "eat";

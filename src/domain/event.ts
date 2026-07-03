@@ -58,3 +58,9 @@ export const LABEL: Record<EventType, string> = {
 	pee: "pipì",
 	poop: "cacca",
 };
+
+/** Human display for a side — bot copy uses these, storage stays dx/sx. */
+export const SIDE_LABEL: Record<Side, string> = {
+	dx: "destro",
+	sx: "sinistro",
+};

@@ -141,6 +141,25 @@ describe("[BOT] handleMessage", () => {
 		);
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
+
+	it("shows the side as destro/sinistro in confirm copy", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.parser.parse.mockResolvedValue(
+			success({ type: "eat", action: "start", side: "dx", confidence: 0.4 }),
+		);
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "p9", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("non capisco"))(env);
+
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("destro"),
+			"p9",
+		);
+	});
 });
 
 const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({

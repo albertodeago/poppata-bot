@@ -68,6 +68,14 @@ describe("[PARSE] parseRules", () => {
 			expect: { type: "eat", action: "start", side: "sx", confidence: 1 },
 		},
 		{
+			input: "poppata destro",
+			expect: { type: "eat", action: "start", side: "dx", confidence: 1 },
+		},
+		{
+			input: "poppata sinistro",
+			expect: { type: "eat", action: "start", side: "sx", confidence: 1 },
+		},
+		{
 			input: "allattamento 21:30",
 			expect: {
 				type: "eat",

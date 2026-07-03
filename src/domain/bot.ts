@@ -4,6 +4,7 @@ import {
 	type EventSource,
 	LABEL,
 	type NewBabyEvent,
+	SIDE_LABEL,
 } from "./event.js";
 import type { LoggerEnv } from "./logger.js";
 import { type Intent, normalize, type ParserEnv, parseRules } from "./parse.js";
@@ -72,7 +73,7 @@ const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 
 const describeIntent = (intent: Intent): string => {
 	const parts = [LABEL[intent.type]];
-	if (intent.side) parts.push(intent.side);
+	if (intent.side) parts.push(SIDE_LABEL[intent.side]);
 	if (intent.action === "instant") parts.push(`alle ${hhmm(intent.at)}`);
 	else
 		parts.push(
