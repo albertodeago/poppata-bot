@@ -18,14 +18,12 @@ Single baby, single allow-listed group chat.
 
 ## Roadmap
 
-- how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side)
-? annulla should work even without `/` command
-? "inizio" without any information should ask with buttons if is a poppata or a nanna
-  ? if poppata, ask which breast (dx/sx)
+X how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side) -> hard to make ATM, you can use multiple /annulla to undo multiple events and then re-enter the correct one
 - improve help and messsage when the bot don't understand (small msg + remind to use /help)
 - docs in bot
 - mini app telegram that shows graphs / stats
-- make it super easy to host yourself ?
+- make it super easy to host yourself or run security audit and make it public
+- backfill previous data (peso incluso)
 
 ## What it understands
 
