@@ -63,6 +63,7 @@ const CONFIDENCE_MIN = 0.7;
 const HELP_HINT =
 	'Non ho capito 🤔 Prova ad esempio: "inizio poppata dx 9.15", "fine 9.40", "pipì", "cacca", "nanna 10". Usa /help per la lista completa.';
 const INTERNAL_ERROR = "Errore interno, riprova.";
+const SIDE_PROMPT = "Per quale seno? 🤱";
 
 const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	chatId: ctx.chatId,
@@ -75,6 +76,10 @@ const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	messageId: ctx.messageId,
 	...(intent.side ? { side: intent.side } : {}),
 });
+
+/** A feed start that still needs its breast side chosen. */
+const needsSide = (intent: Intent): boolean =>
+	intent.type === "eat" && intent.action === "start" && !intent.side;
 
 const describeIntent = (intent: Intent): string => {
 	const parts = [LABEL[intent.type]];
@@ -154,6 +159,28 @@ const createPending = async (
 	await env.bot.sendConfirmation(ctx.chatId, warning, created.data.id);
 };
 
+const promptSide = async (
+	env: BotEnv & PendingEnv & LoggerEnv,
+	ctx: EventContext,
+	intent: Intent,
+): Promise<void> => {
+	const created = await env.pendingRepository.create({
+		chatId: ctx.chatId,
+		userId: ctx.userId,
+		userName: ctx.userName,
+		rawText: ctx.rawText,
+		intent,
+		warning: SIDE_PROMPT,
+		messageId: ctx.messageId,
+	});
+	if (!created.success) {
+		env.logger.error("create pending (side) failed", created.error);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	await env.bot.sendSidePrompt(ctx.chatId, SIDE_PROMPT, created.data.id);
+};
+
 const sendDurationReply = async (
 	env: BotEnv,
 	chatId: number,
@@ -169,6 +196,13 @@ const sendDurationReply = async (
 };
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "Poppata iniziata alle 09:15", plus "— seno destro" when a side is set. */
+const startedText = (intent: Intent): string => {
+	let text = `${cap(LABEL[intent.type])} iniziata alle ${hhmm(intent.at)}`;
+	if (intent.side) text += ` — seno ${SIDE_LABEL[intent.side]}`;
+	return text;
+};
 
 const save = async (
 	env: BotEnv & EventEnv & LoggerEnv,
@@ -193,10 +227,7 @@ const save = async (
 	// A start whose time we defaulted to "now": confirm the assumed time in words
 	// (eat→"poppata", sleep→"nanna" are both feminine, so "iniziata" agrees).
 	if (intent.action === "start" && !timeGiven) {
-		await env.bot.sendMessage(
-			ctx.chatId,
-			`${cap(LABEL[intent.type])} iniziata alle ${hhmm(intent.at)}`,
-		);
+		await env.bot.sendMessage(ctx.chatId, startedText(intent));
 		return;
 	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
@@ -365,6 +396,10 @@ export const handleMessage =
 				await createPending(env, ctx, decision.intent, decision.warning);
 				return;
 			case "save":
+				if (needsSide(decision.intent)) {
+					await promptSide(env, ctx, decision.intent);
+					return;
+				}
 				await save(env, ctx, decision.intent, timeGiven);
 				return;
 		}

@@ -112,13 +112,63 @@ describe("[BOT] handleMessage", () => {
 			success({ ...e, id: "e1", createdAt: new Date() }),
 		);
 
-		// "poppata" with no time → starts at the message arrival time (09:30)
-		await handleMessage(msg("poppata"))(env);
+		// "nanna" with no time → starts at the message arrival time (09:30)
+		await handleMessage(msg("nanna"))(env);
 
 		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
 		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
-		expect(text).toContain("Poppata iniziata alle 9:30");
+		expect(text).toContain("Nanna iniziata alle 9:30");
 		expect(mocks.bot.react).not.toHaveBeenCalled();
+	});
+
+	it("asks for the side when a feed start has no side (no time)", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("poppata"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("seno"),
+			"ps1",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("asks for the side when a feed start has a time but no side", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps2", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("inizio poppata 9.15"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			expect.any(String),
+			"ps2",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("echoes the side when a feed start gives a side but no time", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("poppata dx"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.side).toBe("dx");
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toBe("Poppata iniziata alle 9:30 — seno destro");
+		expect(mocks.bot.sendSidePrompt).not.toHaveBeenCalled();
 	});
 
 	it("confirms-to-save a low-confidence Gemini parse", async () => {
