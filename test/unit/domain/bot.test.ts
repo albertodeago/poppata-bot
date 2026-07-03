@@ -194,6 +194,23 @@ describe("[BOT] handleMessage", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
 
+	it("warns about closing an open session in a low-confidence confirm", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
+		mocks.parser.parse.mockResolvedValue(
+			success({ type: "sleep", action: "start", confidence: 0.4 }),
+		);
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "p3", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("boh vediamo"))(env);
+
+		const text = mocks.bot.sendConfirmation.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("la chiudo");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
 	it("shows the side as destro/sinistro in confirm copy", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));

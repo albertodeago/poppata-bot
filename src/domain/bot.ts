@@ -537,11 +537,17 @@ export const handleMessage =
 		};
 
 		if (confidence < CONFIDENCE_MIN) {
+			const closeNote =
+				intent.action === "start" && open
+					? ` C'è già una ${LABEL[open.type]} aperta dalle ${hhmm(
+							open.startedAt,
+						)}, la chiudo alle ${hhmm(intent.at)}.`
+					: "";
 			await createPending(
 				env,
 				ctx,
 				intent,
-				`Ho capito: ${describeIntent(intent)}. Confermi?`,
+				`Ho capito: ${describeIntent(intent)}.${closeNote} Confermi?`,
 			);
 			return;
 		}
