@@ -10,6 +10,7 @@ export const makeTestEnv = () => {
 		eventRepository: {
 			insert: vi.fn<EventEnv["eventRepository"]["insert"]>(),
 			findOpenSession: vi.fn<EventEnv["eventRepository"]["findOpenSession"]>(),
+			findLastFeed: vi.fn<EventEnv["eventRepository"]["findLastFeed"]>(),
 			closeSession: vi.fn<EventEnv["eventRepository"]["closeSession"]>(),
 			deleteLast: vi.fn<EventEnv["eventRepository"]["deleteLast"]>(),
 			listSince: vi.fn<EventEnv["eventRepository"]["listSince"]>(),

@@ -31,6 +31,18 @@ export const makeMemoryEventRepository = ({
 			return R.success(open ?? null);
 		},
 
+		findLastFeed: async (chatId: number) => {
+			let last: BabyEvent | null = null;
+			for (const e of events) {
+				if (e.chatId === chatId && e.type === "eat" && e.side !== undefined) {
+					if (!last || e.startedAt.getTime() > last.startedAt.getTime()) {
+						last = e;
+					}
+				}
+			}
+			return R.success(last);
+		},
+
 		closeSession: async (id: string, endedAt: Date) => {
 			const e = events.find((ev) => ev.id === id);
 			if (!e) return R.error(new Error("Session not found"));

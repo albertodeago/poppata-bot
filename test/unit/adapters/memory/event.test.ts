@@ -93,4 +93,35 @@ describe("[MEMORY event repo]", () => {
 		expect(r.success).toBe(true);
 		if (r.success) expect(r.data).toHaveLength(2);
 	});
+
+	it("findLastFeed returns the most recent eat WITH a side", async () => {
+		const repo = makeMemoryEventRepository({ logger });
+		await repo.insert(
+			newEvent({ side: "sx", startedAt: new Date("2026-07-02T08:00:00Z") }),
+		);
+		await repo.insert(
+			newEvent({ type: "sleep", startedAt: new Date("2026-07-02T09:00:00Z") }),
+		);
+		await repo.insert(
+			newEvent({ side: "dx", startedAt: new Date("2026-07-02T10:00:00Z") }),
+		);
+		// eat without a side (legacy) must be skipped
+		await repo.insert(
+			newEvent({ startedAt: new Date("2026-07-02T11:00:00Z") }),
+		);
+		const r = await repo.findLastFeed(1);
+		expect(r.success).toBe(true);
+		if (r.success) {
+			expect(r.data?.side).toBe("dx");
+			expect(r.data?.startedAt).toEqual(new Date("2026-07-02T10:00:00Z"));
+		}
+	});
+
+	it("findLastFeed returns null when no eat with a side exists", async () => {
+		const repo = makeMemoryEventRepository({ logger });
+		await repo.insert(newEvent({ type: "pee", startedAt: new Date() }));
+		const r = await repo.findLastFeed(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data).toBeNull();
+	});
 });

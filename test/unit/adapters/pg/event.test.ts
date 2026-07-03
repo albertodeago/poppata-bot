@@ -99,6 +99,27 @@ describe("[PG event repo]", () => {
 		expect(db.query.mock.calls[0]?.[1]).toEqual([1, start, end]);
 	});
 
+	it("findLastFeed queries the latest eat-with-side and maps the row", async () => {
+		const db = { query: vi.fn().mockResolvedValue([row({ side: "sx" })]) };
+		const repo = makePgEventRepository({ db, logger });
+		const r = await repo.findLastFeed(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data?.side).toBe("sx");
+		const [sql, params] = db.query.mock.calls[0] ?? [];
+		expect(sql).toContain("type = 'eat'");
+		expect(sql).toContain("side IS NOT NULL");
+		expect(sql).toContain("ORDER BY started_at DESC");
+		expect(params).toEqual([1]);
+	});
+
+	it("findLastFeed returns null when no rows", async () => {
+		const db = { query: vi.fn().mockResolvedValue([]) };
+		const repo = makePgEventRepository({ db, logger });
+		const r = await repo.findLastFeed(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data).toBeNull();
+	});
+
 	it("returns an error Result when the query throws", async () => {
 		const db = { query: vi.fn().mockRejectedValue(new Error("db down")) };
 		const repo = makePgEventRepository({ db, logger });

@@ -87,6 +87,20 @@ export const makePgEventRepository = (
 			(e) => e,
 		),
 
+	findLastFeed: (chatId) =>
+		tryCatch(
+			async () => {
+				const rows = await env.db.query(
+					`SELECT * FROM events
+				 WHERE chat_id = $1 AND type = 'eat' AND side IS NOT NULL
+				 ORDER BY started_at DESC LIMIT 1`,
+					[chatId],
+				);
+				return rows[0] ? mapRow(rows[0]) : null;
+			},
+			(e) => e,
+		),
+
 	closeSession: (id, endedAt) =>
 		tryCatch(
 			async () => {

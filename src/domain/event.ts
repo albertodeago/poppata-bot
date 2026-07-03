@@ -28,6 +28,8 @@ export interface EventRepository {
 	insert(event: NewBabyEvent): Promise<Result<BabyEvent>>;
 	/** The open eat/sleep session for a chat (endedAt absent), or null. */
 	findOpenSession(chatId: number): Promise<Result<BabyEvent | null>>;
+	/** The most recent eat event with a side (open or closed), or null. */
+	findLastFeed(chatId: number): Promise<Result<BabyEvent | null>>;
 	closeSession(id: string, endedAt: Date): Promise<Result<BabyEvent>>;
 	/** Delete + return the most recently created event in a chat (for /annulla). */
 	deleteLast(chatId: number): Promise<Result<BabyEvent | null>>;
