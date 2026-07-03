@@ -67,6 +67,9 @@ const HELP_HINT =
 	'Non ho capito 🤔 Prova ad esempio: "inizio poppata dx 9.15", "fine 9.40", "pipì", "cacca", "nanna 10". Usa /help per la lista completa.';
 const INTERNAL_ERROR = "Errore interno, riprova.";
 const SIDE_PROMPT = "Per quale seno? 🤱";
+/** A confirmation button is only honored within this window of its creation. */
+const PENDING_TTL_MS = 15 * 60_000;
+const PENDING_EXPIRED = "Scaduto ⏰ — più di 15 minuti, riscrivi il messaggio.";
 
 const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	chatId: ctx.chatId,
@@ -282,6 +285,15 @@ export const handleCallback =
 			// stale / already handled
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.bot.answerCallback(cb.id, "Scaduto");
+			return;
+		}
+
+		// Honor a tap only within PENDING_TTL_MS: past that the intent's time is
+		// too stale to trust, so discard it and ask the user to resend.
+		if (cb.at.getTime() - p.createdAt.getTime() > PENDING_TTL_MS) {
+			await env.pendingRepository.delete(p.id);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.bot.answerCallback(cb.id, PENDING_EXPIRED);
 			return;
 		}
 

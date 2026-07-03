@@ -440,6 +440,23 @@ describe("[BOT] handleCallback", () => {
 		expect(mocks.bot.answerCallback).toHaveBeenCalled();
 	});
 
+	it("treats a tap more than 15 minutes after creation as expired", async () => {
+		const { env, mocks } = makeTestEnv();
+		// tapped at 09:30, created at 09:10 → 20 minutes old
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(pending({ createdAt: new Date("2026-07-02T09:10:00+02:00") })),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("p1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+		const warnText = mocks.bot.answerCallback.mock.calls[0]?.[1] ?? "";
+		expect(warnText).toMatch(/scaduto/i);
+	});
+
 	const feedStartPending = (id: string): PendingConfirmation =>
 		pending({
 			id,
