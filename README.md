@@ -18,9 +18,7 @@ Single baby, single allow-listed group chat.
 
 ## Roadmap
 
-? DB table for chat
-  - create new chat and add in allow-list
-- retry if Gemini API fails - 2 retries with a bit of wait
+- docs in bot + profile pic
 - mini app telegram that shows graphs / stats
 - make it super easy to host yourself ?
 
