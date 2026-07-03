@@ -30,6 +30,11 @@ export interface BotEnv {
 			text: string,
 			pendingId: string,
 		): Promise<void>;
+		sendTypePrompt(
+			chatId: number,
+			text: string,
+			pendingId: string,
+		): Promise<void>;
 		answerCallback(callbackId: string, text?: string): Promise<void>;
 		clearKeyboard(chatId: number, messageId: number): Promise<void>;
 	};

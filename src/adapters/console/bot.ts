@@ -36,6 +36,14 @@ export const makeConsoleBot = (
 					`\n🤱  [${chatId}] ${text}\n   [Sinistro] [Destro]   (pending ${pendingId}, msg ${mid})\n   → scrivi "sx" o "dx"`,
 				);
 			},
+			sendTypePrompt: async (chatId, text, pendingId) => {
+				const mid = ++msgSeq;
+				state.lastPendingId = pendingId;
+				state.lastConfirmationMessageId = mid;
+				console.log(
+					`\n🍼  [${chatId}] ${text}\n   [Poppata] [Nanna]   (pending ${pendingId}, msg ${mid})\n   → scrivi "eat" o "sleep"`,
+				);
+			},
 			answerCallback: async (_id, text) => {
 				if (text) console.log(`   (callback: ${text})`);
 			},

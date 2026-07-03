@@ -78,6 +78,26 @@ describe("[TELEGRAF adapter]", () => {
 		});
 	});
 
+	it("sendTypePrompt builds eat:/sleep: inline buttons", async () => {
+		const { Ctor, telegram } = makeFake();
+		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		await botEnv.bot.sendTypePrompt(1, "Poppata o nanna? 🍼", "p1");
+		expect(telegram.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Poppata o nanna? 🍼",
+			{
+				reply_markup: {
+					inline_keyboard: [
+						[
+							{ text: "Poppata", callback_data: "eat:p1" },
+							{ text: "Nanna", callback_data: "sleep:p1" },
+						],
+					],
+				},
+			},
+		);
+	});
+
 	it("clearKeyboard removes the markup and swallows 'not modified'", async () => {
 		const { Ctor, telegram } = makeFake();
 		telegram.editMessageReplyMarkup.mockRejectedValueOnce(
