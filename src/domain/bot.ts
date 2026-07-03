@@ -279,7 +279,6 @@ export const handleCallback =
 			return;
 		}
 
-		// verb === "conf"
 		const ctx: EventContext = {
 			chatId: p.chatId,
 			userId: p.userId,
@@ -287,6 +286,32 @@ export const handleCallback =
 			messageId: p.messageId,
 			rawText: p.rawText,
 		};
+
+		// Side buttons: fill the missing breast, then save the feed start.
+		if (verb === "dx" || verb === "sx") {
+			const intent: Intent = { ...p.intent, side: verb };
+			const applied = await applyIntent(intent, ctx)(env);
+			if (!applied.success) {
+				env.logger.error("applyIntent (side) failed", applied.error);
+				await env.bot.answerCallback(cb.id, "Errore");
+				return;
+			}
+			await env.bot.sendMessage(ctx.chatId, `${startedText(intent)} ✅`);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.pendingRepository.delete(p.id);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
+		// verb === "conf": a confirmed feed start still missing its side asks for it.
+		if (needsSide(p.intent)) {
+			await promptSide(env, ctx, p.intent);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.pendingRepository.delete(p.id);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
 		const applied = await applyIntent(p.intent, ctx)(env);
 		if (!applied.success) {
 			env.logger.error("applyIntent (confirm) failed", applied.error);

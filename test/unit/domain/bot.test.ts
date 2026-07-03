@@ -316,4 +316,63 @@ describe("[BOT] handleCallback", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 		expect(mocks.bot.answerCallback).toHaveBeenCalled();
 	});
+
+	const feedStartPending = (id: string): PendingConfirmation =>
+		pending({
+			id,
+			rawText: "poppata",
+			intent: {
+				type: "eat",
+				action: "start",
+				at: new Date("2026-07-02T09:15:00+02:00"),
+				source: "rules",
+				confidence: 1,
+			},
+			warning: "Per quale seno? 🤱",
+		});
+
+	it("dx button fills the side, saves the feed, and confirms", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(feedStartPending("ps1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("dx:ps1"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.side).toBe("dx");
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("seno destro");
+		expect(text).toContain("✅");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("ps1");
+		expect(mocks.bot.answerCallback).toHaveBeenCalled();
+	});
+
+	it("confirming a sideless feed start asks for the side instead of saving", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(feedStartPending("p1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps2", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			expect.any(String),
+			"ps2",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("p1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+	});
 });
