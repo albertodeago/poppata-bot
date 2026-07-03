@@ -17,6 +17,7 @@ import {
 	oggiCommand,
 	sendDailyReport,
 	sendWeeklyReport,
+	senoCommand,
 	settimanaCommand,
 	startCommand,
 	statoCommand,
@@ -82,6 +83,9 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 			return true;
 		case "/annulla":
 			await annullaCommand(DEV_CHAT_ID)(env);
+			return true;
+		case "/seno":
+			await senoCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/help":
 			await helpCommand(DEV_CHAT_ID)(env);

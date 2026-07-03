@@ -10,6 +10,7 @@ import {
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
+	senoCommand,
 	settimanaCommand,
 	startCommand,
 	statoCommand,
@@ -49,6 +50,9 @@ const initBot = (): void => {
 	});
 	bot.command("annulla", async (ctx) => {
 		await annullaCommand(ctx.chat.id)(env);
+	});
+	bot.command("seno", async (ctx) => {
+		await senoCommand(ctx.chat.id, new Date())(env);
 	});
 
 	bot.on("text", async (ctx) => {

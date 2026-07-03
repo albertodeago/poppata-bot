@@ -1,5 +1,6 @@
 import type { BotEnv } from "./bot.js";
 import { type EventEnv, LABEL } from "./event.js";
+import { answerLastFeed } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
 import {
 	aggregate,
@@ -34,8 +35,11 @@ export const HELP_TEXT = [
 	"/ieri — statistiche di ieri",
 	"/settimana — statistiche della settimana",
 	"/annulla — rimuove l'ultimo evento",
+	'/seno — ultimo seno usato (o scrivi "che seno?")',
 	"/help — questo messaggio",
 ].join("\n");
+
+export const senoCommand = answerLastFeed;
 
 export const statoCommand =
 	(chatId: number, now: Date) =>

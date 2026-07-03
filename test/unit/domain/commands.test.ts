@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	annullaCommand,
+	HELP_TEXT,
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
 	sendDailyReport,
 	sendWeeklyReport,
+	senoCommand,
 	settimanaCommand,
 	statoCommand,
 } from "../../../src/domain/commands.js";
@@ -154,5 +156,34 @@ describe("[COMMANDS] report senders", () => {
 		expect(call?.[1]?.toISOString()).toBe(
 			new Date("2026-06-22T00:00:00+02:00").toISOString(),
 		);
+	});
+});
+
+describe("[COMMANDS] /seno", () => {
+	it("HELP_TEXT lists the /seno command", () => {
+		expect(HELP_TEXT).toContain("/seno");
+	});
+
+	it("replies with the last feed", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findLastFeed.mockResolvedValue(
+			success({
+				id: "e1",
+				chatId: 1,
+				userId: 1,
+				userName: "papà",
+				type: "eat",
+				side: "dx",
+				startedAt: new Date("2026-07-02T12:00:00Z"),
+				endedAt: new Date("2026-07-02T13:00:00Z"),
+				source: "rules",
+				rawText: "poppata dx",
+				messageId: 1,
+				createdAt: new Date("2026-07-02T13:00:00Z"),
+			}),
+		);
+		await senoCommand(1, new Date("2026-07-02T15:00:00Z"))(env);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Ultima poppata: seno destro");
 	});
 });
