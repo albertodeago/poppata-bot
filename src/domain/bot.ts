@@ -75,6 +75,7 @@ const SIDE_PROMPT = "Per quale seno? 🤱";
 /** A confirmation button is only honored within this window of its creation. */
 const PENDING_TTL_MS = 15 * 60_000;
 const PENDING_EXPIRED = "Scaduto ⏰ — più di 15 minuti, riscrivi il messaggio.";
+const TYPE_PROMPT = "Poppata o nanna? 🍼";
 
 const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	chatId: ctx.chatId,
@@ -200,6 +201,37 @@ const promptSide = async (
 		`${SIDE_PROMPT}${hint}`,
 		created.data.id,
 	);
+};
+
+const promptType = async (
+	env: BotEnv & PendingEnv & LoggerEnv,
+	ctx: EventContext,
+	at: Date,
+): Promise<void> => {
+	// The stored `type` is a placeholder; the button verb (eat/sleep) in
+	// handleCallback sets the real one. confidence:1 — the user picks explicitly.
+	const intent: Intent = {
+		type: "sleep",
+		action: "start",
+		at,
+		source: "rules",
+		confidence: 1,
+	};
+	const created = await env.pendingRepository.create({
+		chatId: ctx.chatId,
+		userId: ctx.userId,
+		userName: ctx.userName,
+		rawText: ctx.rawText,
+		intent,
+		warning: TYPE_PROMPT,
+		messageId: ctx.messageId,
+	});
+	if (!created.success) {
+		env.logger.error("create pending (type) failed", created.error);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	await env.bot.sendTypePrompt(ctx.chatId, TYPE_PROMPT, created.data.id);
 };
 
 const sendDurationReply = async (
@@ -333,6 +365,30 @@ export const handleCallback =
 			return;
 		}
 
+		// Type buttons: the verb is authoritative (the stored placeholder type is
+		// ignored). eat → chain to the side prompt; sleep → save directly.
+		if (verb === "eat" || verb === "sleep") {
+			const intent: Intent = { ...p.intent, type: verb };
+			if (needsSide(intent)) {
+				await promptSide(env, ctx, intent, cb.at);
+				await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+				await env.pendingRepository.delete(p.id);
+				await env.bot.answerCallback(cb.id);
+				return;
+			}
+			const applied = await applyIntent(intent, ctx)(env);
+			if (!applied.success) {
+				env.logger.error("applyIntent (type) failed", applied.error);
+				await env.bot.answerCallback(cb.id, "Errore");
+				return;
+			}
+			await env.bot.sendMessage(ctx.chatId, `${startedText(intent)} ✅`);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.pendingRepository.delete(p.id);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
 		// verb === "conf": a confirmed feed start still missing its side asks for it.
 		if (needsSide(p.intent)) {
 			await promptSide(env, ctx, p.intent, cb.at);
@@ -373,6 +429,24 @@ export const handleMessage =
 
 		let { type, action, side, hour, minute, hasTime, confidence } = tokens;
 		let source: EventSource = "rules";
+
+		// A start with no type ("inizio", "comincia 9.15"): ask poppata vs nanna
+		// with buttons instead of guessing. Deterministic — skips the Gemini fallback.
+		if (action === "start" && !type) {
+			const at =
+				hasTime && hour !== undefined
+					? resolveClock(arrival, hour, minute).toJSDate()
+					: arrival.toJSDate();
+			const typeCtx: EventContext = {
+				chatId: msg.chatId,
+				userId: msg.userId,
+				userName: msg.userName,
+				messageId: msg.messageId,
+				rawText: msg.text,
+			};
+			await promptType(env, typeCtx, at);
+			return;
+		}
 
 		if (confidence === 0) {
 			const g = await env.parser.parse(msg.text);

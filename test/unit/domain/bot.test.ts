@@ -332,6 +332,37 @@ describe("[BOT] handleMessage", () => {
 			"ps1",
 		);
 	});
+
+	it("asks poppata vs nanna for a typeless start", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pt1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("inizio"))(env);
+
+		expect(mocks.bot.sendTypePrompt).toHaveBeenCalledWith(
+			1,
+			"Poppata o nanna? 🍼",
+			"pt1",
+		);
+		expect(mocks.parser.parse).not.toHaveBeenCalled();
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.bot.sendMessage).not.toHaveBeenCalled();
+	});
+
+	it("preserves a given time into the type prompt intent", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pt2", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("inizio 9.15"))(env);
+
+		const created = mocks.pendingRepository.create.mock.calls[0]?.[0];
+		expect(created?.intent.at).toEqual(new Date("2026-07-02T09:15:00+02:00"));
+		expect(created?.intent.action).toBe("start");
+	});
 });
 
 const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({
@@ -471,6 +502,20 @@ describe("[BOT] handleCallback", () => {
 			warning: "Per quale seno? 🤱",
 		});
 
+	const typePromptPending = (id: string): PendingConfirmation =>
+		pending({
+			id,
+			rawText: "inizio",
+			intent: {
+				type: "sleep", // placeholder — the verb overwrites it
+				action: "start",
+				at: new Date("2026-07-02T09:15:00+02:00"),
+				source: "rules",
+				confidence: 1,
+			},
+			warning: "Poppata o nanna? 🍼",
+		});
+
 	it("dx button fills the side, saves the feed, and confirms", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.pendingRepository.get.mockResolvedValue(
@@ -514,6 +559,52 @@ describe("[BOT] handleCallback", () => {
 		);
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("p1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+	});
+
+	it("nanna button saves a sleep start and confirms", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(typePromptPending("pt1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("sleep:pt1"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.type).toBe("sleep");
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Nanna iniziata");
+		expect(text).toContain("✅");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
+		expect(mocks.bot.sendSidePrompt).not.toHaveBeenCalled();
+	});
+
+	it("poppata button chains into the side prompt", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(typePromptPending("pt1")),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "ps9", createdAt: new Date() }),
+		);
+		mocks.eventRepository.findLastFeed.mockResolvedValue(success(null));
+
+		await handleCallback(cb("eat:pt1"))(env);
+
+		expect(mocks.bot.sendSidePrompt).toHaveBeenCalledWith(
+			1,
+			expect.any(String),
+			"ps9",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
 		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
 	});
 });
