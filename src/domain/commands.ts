@@ -27,6 +27,7 @@ export const HELP_TEXT = [
 	'• "inizio poppata dx 9.15" — inizio poppata (dx/sx, o destro/sinistro; se manca te lo chiedo) alle 9:15',
 	'• "fine 9.40" — chiude la sessione aperta alle 9:40',
 	'• "nanna 10" / "fine 10.15" — inizio/fine nanna',
+	'• "inizio" — se non dico cosa, mi chiedi se poppata o nanna',
 	'• "pipì" / "cacca" — eventi istantanei',
 	"",
 	"Comandi:",

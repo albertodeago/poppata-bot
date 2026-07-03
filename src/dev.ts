@@ -108,7 +108,7 @@ const handleLine = async (line: string): Promise<void> => {
 	const trimmed = line.trim();
 	if (!trimmed) return;
 
-	if (["conf", "ann", "dx", "sx"].includes(trimmed)) {
+	if (["conf", "ann", "dx", "sx", "eat", "sleep"].includes(trimmed)) {
 		const pendingId = state.lastPendingId;
 		if (!pendingId) {
 			console.log("   (nessuna conferma in sospeso)");
@@ -148,7 +148,7 @@ const handleLine = async (line: string): Promise<void> => {
 };
 
 console.log(
-	'poppata-bot dev:local — scrivi messaggi (es. "inizio poppata dx 9.15"), /comandi, o conf/ann/sx/dx. Ctrl+D per uscire.',
+	'poppata-bot dev:local — scrivi messaggi (es. "inizio poppata dx 9.15"), /comandi, o conf/ann/sx/dx/eat/sleep. Ctrl+D per uscire.',
 );
 
 const rl = createInterface({ input: process.stdin });

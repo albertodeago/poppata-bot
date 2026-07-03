@@ -18,10 +18,15 @@ Single baby, single allow-listed group chat.
 
 ## Roadmap
 
-- docs in bot + profile pic
+- track peso
+- how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side)
+? annulla should work even without `/` command
+? "inizio" without any information should ask with buttons if is a poppata or a nanna
+  ? if poppata, ask which breast (dx/sx)
+- improve help and messsage when the bot don't understand (small msg + remind to use /help)
+- docs in bot
 - mini app telegram that shows graphs / stats
 - make it super easy to host yourself ?
-
 
 ## What it understands
 
@@ -71,6 +76,7 @@ pipì                       # → 👍
 conf                       # → press the last [Conferma] button
 ann                        # → press the last [Annulla] button
 sx / dx                    # → tap the [Sinistro] / [Destro] side button
+eat / sleep                # → tap the [Poppata] / [Nanna] type button
 @mamma nanna 22            # → override the sender name
 !23:50 fine                # → override the message arrival time
 /oggi  /ieri  /settimana  /annulla  /help
