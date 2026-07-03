@@ -28,6 +28,14 @@ export const makeConsoleBot = (
 					`\n⚠️  [${chatId}] ${text}\n   [Conferma] [Annulla]   (pending ${pendingId}, msg ${mid})\n   → scrivi "conf" o "ann"`,
 				);
 			},
+			sendSidePrompt: async (chatId, text, pendingId) => {
+				const mid = ++msgSeq;
+				state.lastPendingId = pendingId;
+				state.lastConfirmationMessageId = mid;
+				console.log(
+					`\n🤱  [${chatId}] ${text}\n   [Sinistro] [Destro]   (pending ${pendingId}, msg ${mid})\n   → scrivi "sx" o "dx"`,
+				);
+			},
 			answerCallback: async (_id, text) => {
 				if (text) console.log(`   (callback: ${text})`);
 			},

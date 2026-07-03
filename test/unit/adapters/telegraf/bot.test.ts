@@ -62,6 +62,22 @@ describe("[TELEGRAF adapter]", () => {
 		});
 	});
 
+	it("sendSidePrompt builds sx:/dx: inline buttons", async () => {
+		const { Ctor, telegram } = makeFake();
+		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		await botEnv.bot.sendSidePrompt(1, "Per quale seno? 🤱", "p1");
+		expect(telegram.sendMessage).toHaveBeenCalledWith(1, "Per quale seno? 🤱", {
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{ text: "Sinistro", callback_data: "sx:p1" },
+						{ text: "Destro", callback_data: "dx:p1" },
+					],
+				],
+			},
+		});
+	});
+
 	it("clearKeyboard removes the markup and swallows 'not modified'", async () => {
 		const { Ctor, telegram } = makeFake();
 		telegram.editMessageReplyMarkup.mockRejectedValueOnce(

@@ -47,6 +47,18 @@ export const makeTelegrafAdapter =
 						},
 					});
 				},
+				sendSidePrompt: async (chatId, text, pendingId) => {
+					await bot.telegram.sendMessage(chatId, text, {
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{ text: "Sinistro", callback_data: `sx:${pendingId}` },
+									{ text: "Destro", callback_data: `dx:${pendingId}` },
+								],
+							],
+						},
+					});
+				},
 				answerCallback: async (callbackId, text) => {
 					await bot.telegram.answerCbQuery(callbackId, text);
 				},

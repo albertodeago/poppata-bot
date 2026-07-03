@@ -25,6 +25,7 @@ export const makeTestEnv = () => {
 			sendMessage: vi.fn<BotEnv["bot"]["sendMessage"]>(),
 			react: vi.fn<BotEnv["bot"]["react"]>(),
 			sendConfirmation: vi.fn<BotEnv["bot"]["sendConfirmation"]>(),
+			sendSidePrompt: vi.fn<BotEnv["bot"]["sendSidePrompt"]>(),
 			answerCallback: vi.fn<BotEnv["bot"]["answerCallback"]>(),
 			clearKeyboard: vi.fn<BotEnv["bot"]["clearKeyboard"]>(),
 		},
