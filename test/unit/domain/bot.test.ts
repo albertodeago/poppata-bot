@@ -210,6 +210,33 @@ describe("[BOT] handleMessage", () => {
 			"p9",
 		);
 	});
+
+	it("answers the last-breast keyword without saving an event", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findLastFeed.mockResolvedValue(
+			success({
+				id: "e1",
+				chatId: 1,
+				userId: 1,
+				userName: "papà",
+				type: "eat",
+				side: "dx",
+				startedAt: new Date("2026-07-02T07:00:00+02:00"),
+				endedAt: new Date("2026-07-02T07:20:00+02:00"),
+				source: "rules",
+				rawText: "poppata dx",
+				messageId: 1,
+				createdAt: new Date("2026-07-02T07:20:00+02:00"),
+			}),
+		);
+
+		await handleMessage(msg("che seno?"))(env);
+
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Ultima poppata: seno destro");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.parser.parse).not.toHaveBeenCalled();
+	});
 });
 
 const pending = (over: Partial<PendingConfirmation>): PendingConfirmation => ({

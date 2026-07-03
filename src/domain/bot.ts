@@ -13,6 +13,7 @@ import type { Result } from "./result.js";
 import * as R from "./result.js";
 import { decide } from "./session.js";
 import { formatDuration, hhmm, resolveClock, romeNow } from "./time.js";
+import { LAST_FEED_QUERY, answerLastFeed } from "./lastFeed.js";
 
 export interface BotEnv {
 	bot: {
@@ -330,7 +331,12 @@ export const handleMessage =
 		env: BotEnv & EventEnv & PendingEnv & ParserEnv & LoggerEnv,
 	): Promise<void> => {
 		const arrival = romeNow(msg.at);
-		const tokens = parseRules(normalize(msg.text));
+		const normalized = normalize(msg.text);
+		if (LAST_FEED_QUERY.test(normalized)) {
+			await answerLastFeed(msg.chatId, msg.at)(env);
+			return;
+		}
+		const tokens = parseRules(normalized);
 
 		let { type, action, side, hour, minute, hasTime, confidence } = tokens;
 		let source: EventSource = "rules";
