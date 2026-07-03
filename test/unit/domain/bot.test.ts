@@ -726,8 +726,8 @@ describe("[BOT] handleCallback", () => {
 		);
 		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(openEat));
-		mocks.eventRepository.closeSession.mockImplementation(async (_id, endedAt) =>
-			success({ ...openEat, endedAt }),
+		mocks.eventRepository.closeSession.mockImplementation(
+			async (_id, endedAt) => success({ ...openEat, endedAt }),
 		);
 		mocks.eventRepository.insert.mockImplementation(async (e) =>
 			success({ ...e, id: "e1", createdAt: new Date() }),
