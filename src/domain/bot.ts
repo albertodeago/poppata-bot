@@ -298,7 +298,11 @@ const feedbackFor = async (
 		});
 		return;
 	}
-	// react on the ORIGINAL user message
+	if (p.intent.action === "start") {
+		await env.bot.sendMessage(p.chatId, `${startedText(p.intent)} ✅`);
+		return;
+	}
+	// react on the ORIGINAL user message (instant events)
 	await env.bot.react(p.chatId, p.messageId, "👍");
 };
 

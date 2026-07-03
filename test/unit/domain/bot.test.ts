@@ -416,6 +416,40 @@ describe("[BOT] handleCallback", () => {
 		expect(mocks.bot.answerCallback).toHaveBeenCalled();
 	});
 
+	it("confirming a sleep start replies with the started-text line", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(
+				pending({
+					rawText: "nanna",
+					intent: {
+						type: "sleep",
+						action: "start",
+						at: new Date("2026-07-02T09:15:00+02:00"),
+						source: "gemini",
+						confidence: 0.4,
+					},
+					warning: "Ho capito: nanna inizio 9:15. Confermi?",
+				}),
+			),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "e1", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("conf:p1"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.type).toBe("sleep");
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Nanna iniziata alle 9:15 ✅",
+		);
+		expect(mocks.bot.react).not.toHaveBeenCalled();
+	});
+
 	it("confirm of an 'end' intent replies with the duration", async () => {
 		const { env, mocks } = makeTestEnv();
 		const openEatLocal = { ...openEat };
