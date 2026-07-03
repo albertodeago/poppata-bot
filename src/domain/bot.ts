@@ -1,3 +1,4 @@
+import { ANNULLA_QUERY, annullaCommand } from "./commands.js";
 import {
 	type BabyEvent,
 	type EventEnv,
@@ -345,6 +346,10 @@ export const handleMessage =
 		const normalized = normalize(msg.text);
 		if (LAST_FEED_QUERY.test(normalized)) {
 			await answerLastFeed(msg.chatId, msg.at)(env);
+			return;
+		}
+		if (ANNULLA_QUERY.test(normalized)) {
+			await annullaCommand(msg.chatId)(env);
 			return;
 		}
 		const tokens = parseRules(normalized);

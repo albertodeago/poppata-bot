@@ -34,7 +34,7 @@ export const HELP_TEXT = [
 	"/oggi — statistiche di oggi",
 	"/ieri — statistiche di ieri",
 	"/settimana — statistiche della settimana",
-	"/annulla — rimuove l'ultimo evento",
+	'/annulla — rimuove l\'ultimo evento (o scrivi "annulla")',
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
 	"/help — questo messaggio",
 ].join("\n");
@@ -61,6 +61,9 @@ export const statoCommand =
 			`${cap(LABEL[open.type])} in corso da ${hhmm(open.startedAt)} (${elapsed})`,
 		);
 	};
+
+/** Matches a bare "annulla" message (the /annulla command without the slash). */
+export const ANNULLA_QUERY = /^annulla[!.?]*$/;
 
 export const annullaCommand =
 	(chatId: number) =>

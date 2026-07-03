@@ -240,6 +240,32 @@ describe("[BOT] handleMessage", () => {
 		expect(mocks.parser.parse).not.toHaveBeenCalled();
 	});
 
+	it("recognizes the bare 'annulla' keyword and removes the last event", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.deleteLast.mockResolvedValue(
+			success({
+				id: "e1",
+				chatId: 1,
+				userId: 1,
+				userName: "papà",
+				type: "pee",
+				startedAt: new Date("2026-07-02T09:00:00+02:00"),
+				source: "rules",
+				rawText: "pipì",
+				messageId: 1,
+				createdAt: new Date("2026-07-02T09:00:00+02:00"),
+			}),
+		);
+
+		await handleMessage(msg("Annulla!"))(env);
+
+		expect(mocks.eventRepository.deleteLast).toHaveBeenCalledWith(1);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Rimosso");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.parser.parse).not.toHaveBeenCalled();
+	});
+
 	it("appends the last-side hint to the side prompt", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
