@@ -63,6 +63,22 @@ describe("[PARSE] parseRules", () => {
 				confidence: 1,
 			},
 		},
+		// "mamma" is a common mistype/misheard "nanna" → treat as sleep
+		{
+			input: "inizio mamma 3.32",
+			expect: {
+				type: "sleep",
+				action: "start",
+				hour: 3,
+				minute: 32,
+				hasTime: true,
+				confidence: 1,
+			},
+		},
+		{
+			input: "mamma",
+			expect: { type: "sleep", action: "start", hasTime: false, confidence: 1 },
+		},
 		{
 			input: "poppata sinistra",
 			expect: { type: "eat", action: "start", side: "sx", confidence: 1 },

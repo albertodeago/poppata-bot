@@ -49,7 +49,9 @@ export const normalize = (text: string): string =>
 		.trim();
 
 const EAT = /\b(poppata|allatta(?:mento)?|tetta|latte|poppa)\b/;
-const SLEEP = /\b(nanna|dorme|dormit\w*|sonnellino|sleep)\b/;
+// `mamma` is a frequent mistype/mishearing of `nanna` (same shape, m↔n) — treat
+// it as a sleep keyword so "inizio mamma 3.32" logs a nap, not a feed.
+const SLEEP = /\b(nanna|mamma|dorme|dormit\w*|sonnellino|sleep)\b/;
 // Text is normalized (accent-stripped, lowercased) before matching, so
 // `pipì`→`pipi`, `popò`→`popo`, `pupù`→`pupu`. Word-stems (`\w*`) cover
 // conjugations while avoiding false positives like `piscina` (pool), `cacao`,
