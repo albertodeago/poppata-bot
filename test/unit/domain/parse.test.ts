@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalize, parseRules } from "../../../src/domain/parse.js";
+import {
+	hasBabySignal,
+	normalize,
+	parseRules,
+} from "../../../src/domain/parse.js";
 
 describe("[PARSE] normalize", () => {
 	it("lowercases, trims, strips accents", () => {
@@ -153,6 +157,37 @@ describe("[PARSE] parseRules", () => {
 		it(`parses: "${c.input}"`, () => {
 			const got = parseRules(normalize(c.input));
 			expect(got).toMatchObject(c.expect);
+		});
+	}
+});
+
+describe("[PARSE] hasBabySignal", () => {
+	// Baby-vocabulary present (including words the parser itself doesn't act on).
+	for (const input of [
+		"poppata",
+		"nanna 22",
+		"pipi",
+		"cacca",
+		"dx 9",
+		"ha mangiato tanto",
+		"che pappa buona",
+		"gli ho dato il biberon",
+		"attaccato al seno",
+	]) {
+		it(`true: "${input}"`, () => {
+			expect(hasBabySignal(normalize(input))).toBe(true);
+		});
+	}
+
+	// Unrelated chatter — no signal, should stay silent.
+	for (const input of [
+		"ciao come stai",
+		"buonanotte a tutti",
+		"hey dude hows going",
+		"ci vediamo dopo",
+	]) {
+		it(`false: "${input}"`, () => {
+			expect(hasBabySignal(normalize(input))).toBe(false);
 		});
 	}
 });

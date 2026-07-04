@@ -94,11 +94,23 @@ describe("[BOT] handleMessage", () => {
 		);
 	});
 
-	it("sends the help hint when nothing parses (rules + gemini both empty)", async () => {
+	it("stays silent when nothing parses and there is no baby-word (chatter)", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.parser.parse.mockResolvedValue(success(null));
 
 		await handleMessage(msg("ciao come stai"))(env);
+
+		// Gemini is still consulted — we just don't nag when it's clearly not for us.
+		expect(mocks.parser.parse).toHaveBeenCalled();
+		expect(mocks.bot.sendMessage).not.toHaveBeenCalled();
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("sends the help hint on an unparseable message that has a baby-word", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.parser.parse.mockResolvedValue(success(null));
+
+		await handleMessage(msg("ha mangiato tanto"))(env);
 
 		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
 		expect(text.toLowerCase()).toContain("/help");

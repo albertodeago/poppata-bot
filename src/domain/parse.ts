@@ -62,6 +62,26 @@ const START = /\b(inizio|inizia|start|comincia)\b/;
 const END = /\b(fine|finit[ao]|stop|end|basta)\b/;
 const SIDE_DX = /\b(dx|destra|destro|right)\b/;
 const SIDE_SX = /\b(sx|sinistra|sinistro|left)\b/;
+// Words that don't drive parsing but still mark a message as *meant for the
+// bot*. Deliberately broader than the parse regexes (e.g. `pappa`/`mangia`
+// aren't feed keywords) — see `hasBabySignal`.
+const EXTRA_SIGNAL = /\b(mangia\w*|pappa|biberon|seno)\b/;
+
+/**
+ * True when the (already-normalized) text contains any baby-domain vocabulary.
+ * Callers use it to keep the "non ho capito" hint for genuine-but-unparseable
+ * attempts while staying silent on unrelated group chatter.
+ */
+export const hasBabySignal = (t: string): boolean =>
+	EAT.test(t) ||
+	SLEEP.test(t) ||
+	PEE.test(t) ||
+	POOP.test(t) ||
+	START.test(t) ||
+	END.test(t) ||
+	SIDE_DX.test(t) ||
+	SIDE_SX.test(t) ||
+	EXTRA_SIGNAL.test(t);
 
 const detectType = (t: string): EventType | undefined => {
 	if (EAT.test(t)) return "eat";

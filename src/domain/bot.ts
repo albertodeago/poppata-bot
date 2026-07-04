@@ -9,7 +9,13 @@ import {
 } from "./event.js";
 import { answerLastFeed, LAST_FEED_QUERY, lastFeedHint } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
-import { type Intent, normalize, type ParserEnv, parseRules } from "./parse.js";
+import {
+	hasBabySignal,
+	type Intent,
+	normalize,
+	type ParserEnv,
+	parseRules,
+} from "./parse.js";
 import type { PendingConfirmation, PendingEnv } from "./pending.js";
 import type { Result } from "./result.js";
 import * as R from "./result.js";
@@ -489,7 +495,10 @@ export const handleMessage =
 		}
 
 		if (!action) {
-			await env.bot.sendMessage(msg.chatId, HELP_HINT);
+			// Nudge only genuine-but-unparseable attempts; ignore chatter silently.
+			if (hasBabySignal(normalized)) {
+				await env.bot.sendMessage(msg.chatId, HELP_HINT);
+			}
 			return;
 		}
 
@@ -513,7 +522,9 @@ export const handleMessage =
 		}
 
 		if (!type) {
-			await env.bot.sendMessage(msg.chatId, HELP_HINT);
+			if (hasBabySignal(normalized)) {
+				await env.bot.sendMessage(msg.chatId, HELP_HINT);
+			}
 			return;
 		}
 
