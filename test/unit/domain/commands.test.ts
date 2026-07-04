@@ -6,6 +6,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	scalettaCommand,
 	sendDailyReport,
 	sendWeeklyReport,
 	senoCommand,
@@ -13,7 +14,7 @@ import {
 	statoCommand,
 } from "../../../src/domain/commands.js";
 import type { BabyEvent } from "../../../src/domain/event.js";
-import { success } from "../../../src/domain/result.js";
+import { error, success } from "../../../src/domain/result.js";
 import { romeDay } from "../../../src/domain/time.js";
 import { makeTestEnv } from "../testEnv.js";
 
@@ -275,5 +276,44 @@ describe("[COMMANDS] /peso", () => {
 		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
 		expect(text).toContain("⚖️ Peso");
 		expect(text).toContain("3200 g");
+	});
+});
+
+describe("[COMMANDS] /scaletta", () => {
+	it("HELP_TEXT lists the /scaletta command", () => {
+		expect(HELP_TEXT).toContain("/scaletta");
+	});
+
+	it("sends today's events as an HTML timeline", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.listSince.mockResolvedValue(
+			success([
+				feed("2026-07-02T08:00:00+02:00", "2026-07-02T08:30:00+02:00", "dx"),
+			]),
+		);
+		await scalettaCommand(1, new Date("2026-07-02T12:00:00+02:00"))(env);
+		const call = mocks.bot.sendMessage.mock.calls[0];
+		const text = call?.[1] ?? "";
+		expect(text).toContain("Scaletta di oggi");
+		expect(text).toContain("8:00→8:30");
+		expect(call?.[2]).toEqual({ parseMode: "HTML" });
+		// today's window: [start of day, now)
+		const listCall = mocks.eventRepository.listSince.mock.calls[0];
+		expect(listCall?.[1]?.toISOString()).toBe(
+			new Date("2026-07-02T00:00:00+02:00").toISOString(),
+		);
+		expect(listCall?.[2]?.toISOString()).toBe(
+			new Date("2026-07-02T12:00:00+02:00").toISOString(),
+		);
+	});
+
+	it("reports an internal error when the query fails", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.listSince.mockResolvedValue(error(new Error("boom")));
+		await scalettaCommand(1, new Date("2026-07-02T12:00:00+02:00"))(env);
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Errore interno, riprova.",
+		);
 	});
 });

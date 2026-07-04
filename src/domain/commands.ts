@@ -6,6 +6,7 @@ import {
 	aggregate,
 	aggregateWeekly,
 	formatDaily,
+	formatSchedule,
 	formatWeekly,
 } from "./report.js";
 import {
@@ -37,6 +38,7 @@ export const HELP_TEXT = [
 	"<b>Comandi</b>",
 	"/stato — sessione in corso",
 	"/oggi · /ieri · /settimana — statistiche",
+	"/scaletta — la giornata evento per evento",
 	'/annulla — annulla l\'ultimo evento (o scrivi "annulla")',
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
 	"/peso 3400 — registra il peso; /peso mostra lo storico",
@@ -64,6 +66,25 @@ export const statoCommand =
 			chatId,
 			`${cap(LABEL[open.type])} in corso da ${hhmm(open.startedAt)} (${elapsed})`,
 		);
+	};
+
+export const scalettaCommand =
+	(chatId: number, now: Date) =>
+	async (env: EventEnv & BotEnv & LoggerEnv): Promise<void> => {
+		const window = currentDayWindow(romeNow(now));
+		const evs = await env.eventRepository.listSince(
+			chatId,
+			window.start,
+			window.end,
+		);
+		if (!evs.success) {
+			env.logger.error("scaletta: listSince failed", evs.error);
+			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+			return;
+		}
+		await env.bot.sendMessage(chatId, formatSchedule(evs.data, window), {
+			parseMode: "HTML",
+		});
 	};
 
 /** Matches a bare "annulla" message (the /annulla command without the slash). */
