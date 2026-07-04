@@ -18,7 +18,11 @@ import { formatDuration, hhmm, resolveClock, romeNow } from "./time.js";
 
 export interface BotEnv {
 	bot: {
-		sendMessage(chatId: number, text: string): Promise<void>;
+		sendMessage(
+			chatId: number,
+			text: string,
+			opts?: { parseMode?: "HTML" },
+		): Promise<void>;
 		react(chatId: number, messageId: number, emoji: string): Promise<void>;
 		sendConfirmation(
 			chatId: number,
@@ -69,7 +73,7 @@ export interface EventContext {
 
 const CONFIDENCE_MIN = 0.7;
 const HELP_HINT =
-	'Non ho capito 🤔 Prova ad esempio: "inizio poppata dx 9.15", "fine 9.40", "pipì", "cacca", "nanna 10". Usa /help per la lista completa.';
+	'Non ho capito 🤔 Prova ad esempio: "poppata dx 9.15", "fine 9.40", "nanna 10", "pipì", "cacca". Usa /help per la lista completa.';
 const INTERNAL_ERROR = "Errore interno, riprova.";
 const SIDE_PROMPT = "Per quale seno? 🤱";
 /** A confirmation button is only honored within this window of its creation. */

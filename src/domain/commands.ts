@@ -26,21 +26,20 @@ const INTERNAL_ERROR = "Errore interno, riprova.";
 const PESO_USAGE = "Usa /peso 3400 (peso in grammi).";
 
 export const HELP_TEXT = [
-	"👶 poppata-bot — cosa capisco:",
-	'• "inizio poppata dx 9.15" — inizio poppata (dx/sx, o destro/sinistro; se manca te lo chiedo) alle 9:15',
-	'• "fine 9.40" — chiude la sessione aperta alle 9:40',
-	'• "nanna 10" / "fine 10.15" — inizio/fine nanna',
-	'• "inizio" — se non dico cosa, mi chiedi se poppata o nanna',
-	'• "pipì" / "cacca" — eventi istantanei',
+	"👶 <b>poppata-bot</b>",
 	"",
-	"Comandi:",
+	"<b>Da scrivere in chat</b>",
+	"🍼 poppata dx 9.15 — inizio (dx/sx; se manca te lo chiedo)",
+	"⏹️ fine 9.40 — chiude poppata o nanna aperta",
+	"😴 nanna 10 — inizio nanna",
+	"💧 pipì · 💩 cacca — eventi istantanei",
+	"",
+	"<b>Comandi</b>",
 	"/stato — sessione in corso",
-	"/oggi — statistiche di oggi",
-	"/ieri — statistiche di ieri",
-	"/settimana — statistiche della settimana",
-	'/annulla — rimuove l\'ultimo evento (o scrivi "annulla")',
+	"/oggi · /ieri · /settimana — statistiche",
+	'/annulla — annulla l\'ultimo evento (o scrivi "annulla")',
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
-	'/peso 3400 — registra il peso di oggi (grammi); "/peso" mostra lo storico',
+	"/peso 3400 — registra il peso; /peso mostra lo storico",
 	"/help — questo messaggio",
 ].join("\n");
 
@@ -127,13 +126,15 @@ export const pesoCommand =
 export const helpCommand =
 	(chatId: number) =>
 	async (env: BotEnv): Promise<void> => {
-		await env.bot.sendMessage(chatId, HELP_TEXT);
+		await env.bot.sendMessage(chatId, HELP_TEXT, { parseMode: "HTML" });
 	};
 
 export const startCommand =
 	(chatId: number) =>
 	async (env: BotEnv): Promise<void> => {
-		await env.bot.sendMessage(chatId, `Ciao! 👋\n\n${HELP_TEXT}`);
+		await env.bot.sendMessage(chatId, `Ciao! 👋\n\n${HELP_TEXT}`, {
+			parseMode: "HTML",
+		});
 	};
 
 const dailyReport =

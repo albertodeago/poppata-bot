@@ -26,8 +26,12 @@ export const makeTelegrafAdapter =
 
 		const botEnv: BotEnv = {
 			bot: {
-				sendMessage: async (chatId, text) => {
-					await bot.telegram.sendMessage(chatId, text);
+				sendMessage: async (chatId, text, opts) => {
+					await bot.telegram.sendMessage(
+						chatId,
+						text,
+						opts?.parseMode ? { parse_mode: opts.parseMode } : undefined,
+					);
 				},
 				react: async (chatId, messageId, emoji) => {
 					const reaction: ReactionTypeEmoji[] = [

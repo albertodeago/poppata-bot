@@ -15,7 +15,7 @@ export const makeConsoleBot = (
 	const botEnv: BotEnv = {
 		bot: {
 			sendMessage: async (chatId, text) => {
-				console.log(`\n💬 [${chatId}] ${text}`);
+				console.log(`\n💬 [${chatId}] ${text.replace(/<\/?b>/g, "")}`);
 			},
 			react: async (_chatId, messageId, emoji) => {
 				console.log(`\n${emoji}  (reaction su msg ${messageId})`);
