@@ -11,6 +11,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	scalettaCommand,
 	senoCommand,
 	settimanaCommand,
 	startCommand,
@@ -48,6 +49,9 @@ const initBot = (): void => {
 	});
 	bot.command("settimana", async (ctx) => {
 		await settimanaCommand(ctx.chat.id, new Date())(env);
+	});
+	bot.command("scaletta", async (ctx) => {
+		await scalettaCommand(ctx.chat.id, new Date())(env);
 	});
 	bot.command("annulla", async (ctx) => {
 		await annullaCommand(ctx.chat.id)(env);

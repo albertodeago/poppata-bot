@@ -43,7 +43,7 @@ Free-text messages (Italian first; Gemini best-effort for anything the rules mis
 
 ### Commands
 
-`/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help` · `/start`
+`/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/scaletta` (today's events, one by one) · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help` · `/start`
 
 ### Reports
 
@@ -76,7 +76,7 @@ sx / dx                    # → tap the [Sinistro] / [Destro] side button
 eat / sleep                # → tap the [Poppata] / [Nanna] type button
 @mamma nanna 22            # → override the sender name
 !23:50 fine                # → override the message arrival time
-/oggi  /ieri  /settimana  /annulla  /help
+/oggi  /ieri  /settimana  /scaletta  /annulla  /help
 /report  /report-week      # → fire the daily/weekly report locally
 ```
 

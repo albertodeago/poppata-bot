@@ -17,6 +17,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	scalettaCommand,
 	sendDailyReport,
 	sendWeeklyReport,
 	senoCommand,
@@ -85,6 +86,9 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 			return true;
 		case "/settimana":
 			await settimanaCommand(DEV_CHAT_ID, now)(env);
+			return true;
+		case "/scaletta":
+			await scalettaCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/annulla":
 			await annullaCommand(DEV_CHAT_ID)(env);
