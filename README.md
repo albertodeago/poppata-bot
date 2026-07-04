@@ -19,11 +19,10 @@ Single baby, single allow-listed group chat.
 ## Roadmap
 
 X how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side) -> hard to make ATM, you can use multiple /annulla to undo multiple events and then re-enter the correct one
-- improve help and messsage when the bot don't understand (small msg + remind to use /help)
-- docs in bot
+- backfill previous data (poppate e nanne)
 - mini app telegram that shows graphs / stats
 - make it super easy to host yourself or run security audit and make it public
-- backfill previous data (peso incluso)
+  - to go public, child name should be configurable per chat (we should probably have config per chat with a "init / start" command to get info)
 
 ## What it understands
 
