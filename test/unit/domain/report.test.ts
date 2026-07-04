@@ -4,6 +4,7 @@ import {
 	aggregate,
 	aggregateWeekly,
 	formatDaily,
+	formatSchedule,
 } from "../../../src/domain/report.js";
 import type { TimeWindow } from "../../../src/domain/time.js";
 
@@ -122,5 +123,54 @@ describe("[REPORT] formatDaily", () => {
 		const text = formatDaily(s, "📊 Ieri");
 		expect(text).toContain("📊 Ieri");
 		expect(text.toLowerCase()).toContain("aperta");
+	});
+});
+
+describe("[REPORT] formatSchedule", () => {
+	it("says the day is empty when there are no events", () => {
+		const text = formatSchedule([], window);
+		expect(text).toContain("Scaletta di oggi");
+		expect(text).toContain("Nessun evento ancora oggi.");
+	});
+
+	it("lists events chronologically with feed side, sleep range and totals", () => {
+		const events: BabyEvent[] = [
+			ev({ type: "poop", startedAt: d("2026-07-01T09:40:00+02:00") }),
+			ev({
+				type: "eat",
+				side: "dx",
+				startedAt: d("2026-07-01T09:10:00+02:00"),
+				endedAt: d("2026-07-01T09:35:00+02:00"),
+			}),
+			ev({
+				type: "sleep",
+				startedAt: d("2026-07-01T07:10:00+02:00"),
+				endedAt: d("2026-07-01T09:00:00+02:00"),
+			}),
+		];
+		const text = formatSchedule(events, window);
+		// sorted: 7:10 sleep, 9:10 eat, 9:40 poop
+		const iSleep = text.indexOf("7:10→9:00");
+		const iEat = text.indexOf("9:10→9:35");
+		const iPoop = text.indexOf("cacca");
+		expect(iSleep).toBeGreaterThan(-1);
+		expect(iSleep).toBeLessThan(iEat);
+		expect(iEat).toBeLessThan(iPoop);
+		expect(text).toContain("🍼");
+		expect(text).toContain("dx");
+		expect(text).toContain("(25m)");
+		expect(text).toContain("<pre>");
+		expect(text).toContain("Totali:");
+		expect(text).toContain("🍼 1");
+		expect(text).toContain("💩 1");
+	});
+
+	it("shows an open session as in-progress and excludes it from totals", () => {
+		const events: BabyEvent[] = [
+			ev({ type: "sleep", startedAt: d("2026-07-01T10:05:00+02:00") }),
+		];
+		const text = formatSchedule(events, window);
+		expect(text).toContain("da 10:05 ⏳");
+		expect(text).toContain("😴 0m"); // open session not counted in the total
 	});
 });

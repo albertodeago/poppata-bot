@@ -1,5 +1,5 @@
-import type { BabyEvent } from "./event.js";
-import { formatDuration, type TimeWindow } from "./time.js";
+import { type BabyEvent, isOpenSession, LABEL } from "./event.js";
+import { formatDuration, hhmm, romeNow, type TimeWindow } from "./time.js";
 
 export interface DailyStats {
 	sleepMs: number;
@@ -137,4 +137,34 @@ export const formatWeekly = (s: WeeklyStats, title: string): string => {
 		`💩 Cacca: ${s.poopCount}`,
 	];
 	return lines.join("\n") + footer(s);
+};
+
+/** Fixed-width label so the range column of eat/sleep rows lines up.
+ *  Emoji cell width varies by client, so alignment is best-effort. */
+const scheduleBody = (e: BabyEvent): string => {
+	if (e.type === "pee") return `💧 ${LABEL.pee}`;
+	if (e.type === "poop") return `💩 ${LABEL.poop}`;
+	const icon = e.type === "eat" ? "🍼" : "😴";
+	const side = e.type === "eat" && e.side ? ` ${e.side}` : "";
+	const label = `${icon}${side}`.padEnd(6);
+	if (isOpenSession(e)) return `${label} da ${hhmm(e.startedAt)} ⏳`;
+	const end = e.endedAt as Date; // closed eat/sleep always has endedAt
+	const dur = formatDuration(end.getTime() - e.startedAt.getTime());
+	return `${label} ${hhmm(e.startedAt)}→${hhmm(end)} (${dur})`;
+};
+
+export const formatSchedule = (
+	events: BabyEvent[],
+	window: TimeWindow,
+): string => {
+	const header = `📋 Scaletta di oggi — ${romeNow(window.start).toFormat("d/M")}`;
+	if (events.length === 0) {
+		return `${header}\n\nNessun evento ancora oggi.`;
+	}
+	const rows = [...events]
+		.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
+		.map((e) => `${hhmm(e.startedAt).padStart(5)}  ${scheduleBody(e)}`);
+	const s = aggregate(events, window);
+	const footer = `Totali: 🍼 ${s.feedCount} · 😴 ${formatDuration(s.sleepMs)} · 💧 ${s.peeCount} · 💩 ${s.poopCount}`;
+	return `<pre>${[header, "", ...rows, "", footer].join("\n")}</pre>`;
 };
