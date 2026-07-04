@@ -6,6 +6,7 @@ const COMMANDS = [
 	{ command: "oggi", description: "Statistiche di oggi" },
 	{ command: "ieri", description: "Statistiche di ieri" },
 	{ command: "settimana", description: "Statistiche della settimana" },
+	{ command: "scaletta", description: "La giornata evento per evento" },
 	{ command: "annulla", description: "Rimuove l'ultimo evento" },
 	{ command: "seno", description: "Ultimo seno usato" },
 	{ command: "peso", description: "Peso: registra o mostra lo storico" },
