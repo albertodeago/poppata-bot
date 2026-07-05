@@ -20,7 +20,7 @@ bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHA
 
 ## Roadmap
 
-- mini app telegram that shows graphs / stats
+- [ ] mini app telegram that shows graphs / stats
 
 ## What it understands
 
@@ -182,9 +182,9 @@ openssl rand -hex 32   # → WEBHOOK_SECRET   (Telegram allows A–Z a–z 0–9
 1. **Import the repo** into Vercel (or `vercel` CLI). It's a functions-only project — the included `vercel.json` sets the cron and function limits, and `public/index.html` satisfies Vercel's output-directory check.
 2. **Set the environment variables** above in the Vercel project (Production). Use the **Transaction pooler (6543)** string for `DATABASE_URL` here.
 3. **Deploy** (or redeploy after adding the env vars).
-4. **Register the webhook + bot commands** once (also re-run this whenever you change `WEBHOOK_URL` or `WEBHOOK_SECRET`):
+4. **Register the webhook + bot commands** once (also re-run this whenever you change `WEBHOOK_URL` or `WEBHOOK_SECRET`). The endpoint is guarded by `CRON_SECRET` — pass it as a bearer token:
    ```bash
-   curl -X POST "https://<your-app>.vercel.app/api/setup"
+   curl -X POST -H "Authorization: Bearer $CRON_SECRET" "https://<your-app>.vercel.app/api/setup"
    ```
    Success returns `{"ok":true,"webhook":"…/api/webhook"}`.
 5. **Test it:** in the group, send `inizio poppata dx 9.15` → the bot reacts 👍; `fine 9.40` → it replies with the duration.
@@ -194,7 +194,7 @@ openssl rand -hex 32   # → WEBHOOK_SECRET   (Telegram allows A–Z a–z 0–9
 | route | method | purpose |
 |---|---|---|
 | `/api/webhook` | POST | receives Telegram updates (verifies the secret header) |
-| `/api/setup` | POST | registers the webhook + bot commands (manual, one-time) |
+| `/api/setup` | POST | registers the webhook + bot commands (manual, one-time); requires `Authorization: Bearer $CRON_SECRET` |
 | `/api/cron/report` | GET | daily/weekly report; requires `Authorization: Bearer $CRON_SECRET` |
 
 Test the cron manually:

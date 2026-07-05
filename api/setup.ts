@@ -15,9 +15,14 @@ const COMMANDS = [
 ];
 
 export default async function handler(
-	_req: VercelRequest,
+	req: VercelRequest,
 	res: VercelResponse,
 ): Promise<VercelResponse> {
+	const cronSecret = process.env.CRON_SECRET;
+	if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
+
 	try {
 		const env = makeEnv();
 		const url = `${env.config.webhookUrl.replace(/\/$/, "")}/api/webhook`;
