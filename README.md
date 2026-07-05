@@ -24,25 +24,47 @@ bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHA
 
 ## What it understands
 
-Free-text messages (Italian first; Gemini best-effort for anything the rules miss):
+Free-text messages are Italian first; Gemini is a best-effort fallback for anything the rules miss.
 
-| You type | It logs |
+| You type | What happens |
 |---|---|
-| `inizio poppata dx 9.15` | feed start, right breast, 09:15 |
-| `poppata sx` | feed start, left breast, now |
-| `fine 9.40` | closes the open feed/sleep at 09:40 (replies with the duration) |
-| `nanna 22` / `fine 6.30` | sleep start / end (handles crossing midnight) |
-| `pipì` | pee (instant) |
-| `cacca` | poop (instant) |
-| `peso 3400` | weight (instant) |
+| `inizio poppata dx 9.15` | starts a feed on the right breast at 09:15 |
+| `poppata sx` | starts a feed on the left breast now, and replies with the assumed time |
+| `poppata` | asks **[Sinistro] / [Destro]**, then starts the feed at the message time |
+| `inizio` / `inizio 9.15` | asks **[Poppata] / [Nanna]** before saving |
+| `nanna 22` | starts a sleep session at 22:00 |
+| `fine` | closes the open feed/sleep now, and replies with the duration |
+| `fine 9.40` | closes the open feed/sleep at 09:40, and replies with the duration |
+| `nanna 22` / `fine 6.30` | handles a sleep that crosses midnight |
+| `pipì`, `pipi`, `plin`, `pisciata` | logs pee as an instant event |
+| `cacca`, `popò`, `pupù`, `cacata` | logs poop as an instant event |
+| `che seno?` / `ultimo seno?` | replies with the latest recorded breast side |
+| `annulla` | removes the last event, same as `/annulla` |
 
-- A valid **start / pee / poop / weight** gets a quiet 👍 reaction; a **fine** gets a short text reply with the computed duration.
+- A saved instant event, or a start with all needed details and an explicit time, gets a quiet 👍 reaction.
+- A start that defaults to **now** replies with the time it used; a **fine** replies with the computed duration.
+- Missing information is handled with buttons: feed side (**Sinistro/Destro**) or session type (**Poppata/Nanna**).
 - Anything questionable (starting while a session is open, an implausibly long duration, a low-confidence Gemini guess) asks for **[Conferma] / [Annulla]** before saving.
 - Bare times resolve to whichever a.m./p.m. is **nearest to the message time**; `13`–`23` are taken as 24h.
+- Weight is tracked with `/peso`, not free text.
 
 ### Commands
 
-`/start` (register the chat; optionally `/start Mario`) · `/nome` (set/show the baby name) · `/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/scaletta` (today's events, one by one) · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help`
+| Command | Use it for |
+|---|---|
+| `/start [nome]` | register or greet the chat; optionally set the baby name at once |
+| `/nome [nome]` | show the current baby name, or set/replace it |
+| `/stato` | show the current open feed or sleep session |
+| `/oggi` | show today's stats so far |
+| `/ieri` | show yesterday's stats |
+| `/settimana` | show the current ISO week's stats |
+| `/scaletta` | show today's events one by one |
+| `/annulla` | remove the most recently saved event |
+| `/seno` | show the latest recorded breast side |
+| `/peso [grammi]` | show weight history, or record/update today's weight |
+| `/help` | show the in-chat help |
+
+The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
 
 ### Chat registration
 
