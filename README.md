@@ -1,6 +1,6 @@
 # poppata-bot 🍼
 
-A Telegram bot that logs an infant's activities — **eat / sleep / pee / poop** — from
+A Telegram bot that logs an infant's activities — **eat / sleep / pee / poop / weight** — from
 natural-language Italian messages in a family group chat, and posts automatic daily
 and weekly reports.
 
@@ -20,13 +20,7 @@ bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHA
 
 ## Roadmap
 
-X how can a user fix an error? (e.g. I inserted a wrong time, or I want to change the breast side) -> hard to make ATM, you can use multiple /annulla to undo multiple events and then re-enter the correct one
-- backfill previous data (poppate e nanne)
 - mini app telegram that shows graphs / stats
-- make it super easy to host yourself or run security audit and make it public
-  - ✅ per-chat config: chats self-register via `/start`; baby name set with `/nome`
-    (see **Chat registration** below). Remaining: timezone/i18n are still hardcoded
-    (Europe/Rome, Italian).
 
 ## What it understands
 
@@ -40,8 +34,9 @@ Free-text messages (Italian first; Gemini best-effort for anything the rules mis
 | `nanna 22` / `fine 6.30` | sleep start / end (handles crossing midnight) |
 | `pipì` | pee (instant) |
 | `cacca` | poop (instant) |
+| `peso 3400` | weight (instant) |
 
-- A valid **start / pee / poop** gets a quiet 👍 reaction; a **fine** gets a short text reply with the computed duration.
+- A valid **start / pee / poop / weight** gets a quiet 👍 reaction; a **fine** gets a short text reply with the computed duration.
 - Anything questionable (starting while a session is open, an implausibly long duration, a low-confidence Gemini guess) asks for **[Conferma] / [Annulla]** before saving.
 - Bare times resolve to whichever a.m./p.m. is **nearest to the message time**; `13`–`23` are taken as 24h.
 
