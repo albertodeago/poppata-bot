@@ -4,3 +4,6 @@ coverage/
 .env
 *.log
 .DS_Store
+
+old-data.csv
+scripts/backfill*
