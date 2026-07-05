@@ -2,6 +2,7 @@ import { Telegraf } from "telegraf";
 import type { ReactionTypeEmoji } from "telegraf/types";
 import type { ConfigEnv } from "../../config.js";
 import type { BotEnv } from "../../domain/bot.js";
+import type { ChatConfigEnv } from "../../domain/chatConfig.js";
 import type { LoggerEnv } from "../../domain/logger.js";
 
 export interface TelegrafAdapter {
@@ -11,14 +12,28 @@ export interface TelegrafAdapter {
 
 export const makeTelegrafAdapter =
 	(telegraf = Telegraf) =>
-	(env: ConfigEnv & LoggerEnv): TelegrafAdapter => {
+	(env: ConfigEnv & LoggerEnv & ChatConfigEnv): TelegrafAdapter => {
 		const bot = new telegraf(env.config.botToken);
 
-		// Serve only the allow-listed chat(s).
+		// Registration gate: a chat is served once it has a chat_configs row. The
+		// entry points that can CREATE that row (/start, /help, and the
+		// my_chat_member add-event) always pass; everything else from an
+		// unregistered chat is dropped before it can parse text or call Gemini.
 		bot.use(async (ctx, next) => {
 			const chatId = ctx.chat?.id;
-			if (chatId !== undefined && !env.config.allowedChatIds.includes(chatId)) {
-				env.logger.info(`Ignoring update from chat ${chatId}`);
+			if (chatId === undefined) return next();
+
+			const msg = ctx.message;
+			const text = msg && "text" in msg ? msg.text : undefined;
+			const isEntry =
+				ctx.updateType === "my_chat_member" ||
+				(typeof text === "string" &&
+					(text.startsWith("/start") || text.startsWith("/help")));
+			if (isEntry) return next();
+
+			const reg = await env.chatConfigRepository.get(chatId);
+			if (!reg.success || !reg.data) {
+				env.logger.info(`Ignoring update from unregistered chat ${chatId}`);
 				return;
 			}
 			return next();

@@ -11,6 +11,7 @@
     "migrate:up": "node-pg-migrate -m migrations up",
     "migrate:down": "node-pg-migrate -m migrations down",
     "migrate:retry": "node-pg-migrate -m migrations retry",
+    "enable-chat": "tsx scripts/enable-chat.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

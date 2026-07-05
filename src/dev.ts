@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { makeConsoleBot } from "./adapters/console/bot.js";
 import { makeLogger } from "./adapters/console/logger.js";
+import { makeMemoryChatConfigRepository } from "./adapters/memory/chatConfig.js";
 import { makeMemoryEventRepository } from "./adapters/memory/event.js";
 import { makeMemoryPendingRepository } from "./adapters/memory/pending.js";
 import { makeMemoryWeightRepository } from "./adapters/memory/weight.js";
@@ -11,6 +12,7 @@ import {
 	handleMessage,
 	type IncomingMessage,
 } from "./domain/bot.js";
+import type { ChatConfigEnv } from "./domain/chatConfig.js";
 import {
 	annullaCommand,
 	helpCommand,
@@ -22,29 +24,38 @@ import {
 	sendWeeklyReport,
 	senoCommand,
 	settimanaCommand,
-	startCommand,
 	statoCommand,
 } from "./domain/commands.js";
 import type { EventEnv } from "./domain/event.js";
 import type { LoggerEnv } from "./domain/logger.js";
 import type { ParserEnv } from "./domain/parse.js";
 import type { PendingEnv } from "./domain/pending.js";
+import { nomeCommand, registerChat } from "./domain/registration.js";
 import type { WeightEnv } from "./domain/weight.js";
 
 const DEV_CHAT_ID = 1;
 const DEV_USER_ID = 1;
+const DEV_MAX_CHATS = 5;
+const DEV_REPO_ISSUES_URL =
+	"https://github.com/albertodeago/poppata-bot/issues";
 
 const logger = makeLogger();
 const { botEnv, state } = makeConsoleBot({ logger });
-const env: BotEnv & EventEnv & PendingEnv & ParserEnv & WeightEnv & LoggerEnv =
-	{
-		logger,
-		eventRepository: makeMemoryEventRepository({ logger }),
-		weightRepository: makeMemoryWeightRepository({ logger }),
-		pendingRepository: makeMemoryPendingRepository({ logger }),
-		parser: makeNoopParser(),
-		...botEnv,
-	};
+const env: BotEnv &
+	EventEnv &
+	PendingEnv &
+	ParserEnv &
+	WeightEnv &
+	ChatConfigEnv &
+	LoggerEnv = {
+	logger,
+	eventRepository: makeMemoryEventRepository({ logger }),
+	weightRepository: makeMemoryWeightRepository({ logger }),
+	pendingRepository: makeMemoryPendingRepository({ logger }),
+	chatConfigRepository: makeMemoryChatConfigRepository({ logger }),
+	parser: makeNoopParser(),
+	...botEnv,
+};
 
 let msgSeq = 0;
 
@@ -99,9 +110,6 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 		case "/help":
 			await helpCommand(DEV_CHAT_ID)(env);
 			return true;
-		case "/start":
-			await startCommand(DEV_CHAT_ID)(env);
-			return true;
 		case "/report":
 			await sendDailyReport(DEV_CHAT_ID, now)(env);
 			return true;
@@ -141,6 +149,24 @@ const handleLine = async (line: string): Promise<void> => {
 	if (trimmed === "/peso" || trimmed.startsWith("/peso ")) {
 		const arg = trimmed.slice("/peso".length).trim();
 		await pesoCommand(DEV_CHAT_ID, DEV_USER_ID, "papà", arg, new Date())(env);
+		return;
+	}
+
+	if (trimmed === "/start" || trimmed.startsWith("/start ")) {
+		const name = trimmed.slice("/start".length).trim();
+		await registerChat({
+			chatId: DEV_CHAT_ID,
+			userName: "papà",
+			...(name ? { name } : {}),
+			maxChats: DEV_MAX_CHATS,
+			repoIssuesUrl: DEV_REPO_ISSUES_URL,
+		})(env);
+		return;
+	}
+
+	if (trimmed === "/nome" || trimmed.startsWith("/nome ")) {
+		const arg = trimmed.slice("/nome".length).trim();
+		await nomeCommand(DEV_CHAT_ID, arg)(env);
 		return;
 	}
 

@@ -42,6 +42,7 @@ export const HELP_TEXT = [
 	'/annulla — annulla l\'ultimo evento (o scrivi "annulla")',
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
 	"/peso 3400 — registra il peso; /peso mostra lo storico",
+	"/nome Mario — imposta il nome del bimbo/a",
 	"/help — questo messaggio",
 ].join("\n");
 
@@ -148,14 +149,6 @@ export const helpCommand =
 	(chatId: number) =>
 	async (env: BotEnv): Promise<void> => {
 		await env.bot.sendMessage(chatId, HELP_TEXT, { parseMode: "HTML" });
-	};
-
-export const startCommand =
-	(chatId: number) =>
-	async (env: BotEnv): Promise<void> => {
-		await env.bot.sendMessage(chatId, `Ciao! 👋\n\n${HELP_TEXT}`, {
-			parseMode: "HTML",
-		});
 	};
 
 const dailyReport =

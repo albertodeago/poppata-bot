@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import type { BotEnv } from "../../src/domain/bot.js";
+import type { ChatConfigEnv } from "../../src/domain/chatConfig.js";
 import type { EventEnv } from "../../src/domain/event.js";
 import type { LoggerEnv } from "../../src/domain/logger.js";
 import type { ParserEnv } from "../../src/domain/parse.js";
@@ -19,6 +20,14 @@ export const makeTestEnv = () => {
 		weightRepository: {
 			upsert: vi.fn<WeightEnv["weightRepository"]["upsert"]>(),
 			list: vi.fn<WeightEnv["weightRepository"]["list"]>(),
+		},
+		chatConfigRepository: {
+			get: vi.fn<ChatConfigEnv["chatConfigRepository"]["get"]>(),
+			count: vi.fn<ChatConfigEnv["chatConfigRepository"]["count"]>(),
+			create: vi.fn<ChatConfigEnv["chatConfigRepository"]["create"]>(),
+			setBabyName:
+				vi.fn<ChatConfigEnv["chatConfigRepository"]["setBabyName"]>(),
+			listAll: vi.fn<ChatConfigEnv["chatConfigRepository"]["listAll"]>(),
 		},
 		pendingRepository: {
 			create: vi.fn<PendingEnv["pendingRepository"]["create"]>(),
@@ -50,10 +59,12 @@ export const makeTestEnv = () => {
 		PendingEnv &
 		ParserEnv &
 		WeightEnv &
+		ChatConfigEnv &
 		LoggerEnv = {
 		eventRepository: mocks.eventRepository,
 		weightRepository: mocks.weightRepository,
 		pendingRepository: mocks.pendingRepository,
+		chatConfigRepository: mocks.chatConfigRepository,
 		parser: mocks.parser,
 		bot: mocks.bot,
 		logger: mocks.logger,

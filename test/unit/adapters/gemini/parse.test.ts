@@ -4,13 +4,14 @@ import { makeGeminiParser } from "../../../../src/adapters/gemini/parse.js";
 const env = {
 	config: {
 		botToken: "b",
-		allowedChatIds: [1],
 		databaseUrl: "d",
 		geminiApiKey: "k",
 		geminiModel: "gemini-2.0-flash",
 		cronSecret: "c",
 		webhookUrl: "w",
 		webhookSecret: "whs",
+		maxChats: 5,
+		repoIssuesUrl: "https://github.com/x/y/issues",
 	},
 	logger: {
 		info: vi.fn(),

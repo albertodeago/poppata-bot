@@ -1,15 +1,19 @@
 export type Config = {
 	botToken: string;
-	/** One or more group chats the bot serves (comma-separated in ALLOWED_CHAT_ID). */
-	allowedChatIds: number[];
 	databaseUrl: string;
 	geminiApiKey: string;
 	geminiModel: string;
 	cronSecret: string;
 	webhookUrl: string;
 	webhookSecret: string;
-	babyName?: string;
+	/** Max number of chats that may self-register (MAX_CHATS, default 5). */
+	maxChats: number;
+	/** Base repo issues URL for the "bot full" request-access link. */
+	repoIssuesUrl: string;
 };
+
+const DEFAULT_REPO_ISSUES_URL =
+	"https://github.com/albertodeago/poppata-bot/issues";
 
 export type ConfigEnv = {
 	config: Config;
@@ -22,30 +26,23 @@ const required = (name: string): string => {
 };
 
 export const getConfig = (): Config => {
-	const allowedChatIds = required("ALLOWED_CHAT_ID")
-		.split(",")
-		.map((s) => s.trim())
-		.filter((s) => s.length > 0)
-		.map((s) => Number.parseInt(s, 10));
-	if (
-		allowedChatIds.length === 0 ||
-		allowedChatIds.some((id) => Number.isNaN(id))
-	) {
-		throw new Error(
-			"ALLOWED_CHAT_ID must be one or more comma-separated numbers",
-		);
+	const maxChats = process.env.MAX_CHATS
+		? Number.parseInt(process.env.MAX_CHATS, 10)
+		: 5;
+	if (Number.isNaN(maxChats) || maxChats < 1) {
+		throw new Error("MAX_CHATS must be a positive integer");
 	}
 
 	const config: Config = {
 		botToken: required("BOT_TOKEN"),
-		allowedChatIds,
 		databaseUrl: required("DATABASE_URL"),
 		geminiApiKey: required("GEMINI_API_KEY"),
 		geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
 		cronSecret: required("CRON_SECRET"),
 		webhookUrl: required("WEBHOOK_URL"),
 		webhookSecret: required("WEBHOOK_SECRET"),
-		...(process.env.BABY_NAME ? { babyName: process.env.BABY_NAME } : {}),
+		maxChats,
+		repoIssuesUrl: process.env.REPO_ISSUES_URL ?? DEFAULT_REPO_ISSUES_URL,
 	};
 	return config;
 };

@@ -12,7 +12,9 @@ and weekly reports.
   **Vercel** serverless functions, **Google Gemini** as a fallback parser,
   **luxon** for Europe/Rome time. Tests with **Vitest**, lint/format with **Biome**.
 
-Single baby, single allow-listed group chat.
+One baby per chat. Chats **register themselves** with `/start` (or by adding the
+bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHATS`
+(default 5) chats; beyond that, new chats get a prefilled "request access" link.
 
 ---
 
@@ -22,7 +24,9 @@ X how can a user fix an error? (e.g. I inserted a wrong time, or I want to chang
 - backfill previous data (poppate e nanne)
 - mini app telegram that shows graphs / stats
 - make it super easy to host yourself or run security audit and make it public
-  - to go public, child name should be configurable per chat (we should probably have config per chat with a "init / start" command to get info)
+  - ✅ per-chat config: chats self-register via `/start`; baby name set with `/nome`
+    (see **Chat registration** below). Remaining: timezone/i18n are still hardcoded
+    (Europe/Rome, Italian).
 
 ## What it understands
 
@@ -43,7 +47,22 @@ Free-text messages (Italian first; Gemini best-effort for anything the rules mis
 
 ### Commands
 
-`/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/scaletta` (today's events, one by one) · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help` · `/start`
+`/start` (register the chat; optionally `/start Mario`) · `/nome` (set/show the baby name) · `/stato` (current open session) · `/oggi` · `/ieri` · `/settimana` · `/scaletta` (today's events, one by one) · `/annulla` (undo last event) · `/seno` (last breast used) · `/peso` (record/show weight) · `/help`
+
+### Chat registration
+
+The bot serves a chat only after it has a config row. A chat gets one by:
+
+- being **added to a group** — the bot auto-registers and posts a welcome, or
+- someone running **`/start`** (optionally `/start Mario` to set the name at once).
+
+Until then, the bot ignores everything except `/start` and `/help` (no parsing, no
+Gemini). Set/replace the name anytime with **`/nome Mario`**; bare **`/nome`** shows
+the current one. The name is optional — reports just omit it when unset.
+
+When the deployment is already serving `MAX_CHATS` chats, a new chat's `/start`
+replies with a **prefilled GitHub-issue link** (carrying the chat id) so the owner
+can enable it manually with `npm run enable-chat -- <chatId> [nome]`.
 
 ### Reports
 
@@ -65,6 +84,8 @@ npm run dev:local
 Then type messages, one per line:
 
 ```
+/start Mario               # → register this chat; set the baby name
+/nome Gigi                 # → change the name; "/nome" shows the current one
 inizio poppata dx 9.15     # → 👍 reaction
 fine 9.40                  # → "durata poppata: 25m"
 /stato                     # → run a command
@@ -94,6 +115,7 @@ The console parser is **rules-only** (no Gemini locally), which the design allow
 | `npm run lint` / `lint:apply` | Biome check / check-and-write |
 | `npm run build` | `tsc` compile to `dist/` (sanity; Vercel builds functions itself) |
 | `npm run migrate:up` / `migrate:down` | apply / roll back DB migrations |
+| `npm run enable-chat -- <chatId> [nome]` | register a chat manually (bypasses the cap; needs `DATABASE_URL`) |
 
 ---
 
@@ -107,10 +129,7 @@ and two generated secrets.
 1. Message **[@BotFather](https://t.me/BotFather)** → `/newbot` → pick a name and username → copy the token → this is **`BOT_TOKEN`**.
 2. **Turn off privacy mode** (critical — otherwise the bot only receives `/commands`, not free text like `inizio poppata 9.15`):
    `@BotFather` → `/setprivacy` → pick your bot → **Disable**.
-3. Create a Telegram **group** (use a private test group first), and **add the bot to it**. If you changed privacy mode after adding it, **remove and re-add** the bot so the change takes effect — or make the bot a **group admin** (admins see all messages regardless).
-4. Get the group's chat id → **`ALLOWED_CHAT_ID`**. Send any message in the group, then open
-   `https://api.telegram.org/bot<BOT_TOKEN>/getUpdates`
-   and read `message.chat.id`. Groups are negative; supergroups start with `-100…`.
+3. Create a Telegram **group** (use a private test group first), and **add the bot to it**. If you changed privacy mode after adding it, **remove and re-add** the bot so the change takes effect — or make the bot a **group admin** (admins see all messages regardless). No chat id to configure: adding the bot (or `/start`) registers the chat itself.
 
 ### 2. Supabase database
 
@@ -128,7 +147,7 @@ Then create the tables (uses the **Session pooler** string in your local `.env`)
 npm run migrate:up
 ```
 
-You should see `events` and `pending_confirmations` appear in the Supabase Table Editor. The migration also creates a **partial unique index** enforcing at most one open eat/sleep session per chat.
+You should see `events`, `pending_confirmations`, `weights`, and `chat_configs` appear in the Supabase Table Editor. The migrations also create a **partial unique index** enforcing at most one open eat/sleep session per chat.
 
 ### 3. Gemini
 
@@ -148,16 +167,16 @@ openssl rand -hex 32   # → WEBHOOK_SECRET   (Telegram allows A–Z a–z 0–9
 | var | required | purpose |
 |---|:--:|---|
 | `BOT_TOKEN` | ✅ | Telegram bot token |
-| `ALLOWED_CHAT_ID` | ✅ | the group chat(s) served — one negative id, or several comma-separated (e.g. `-100111,-100222`) to run the same baby in multiple groups |
 | `DATABASE_URL` | ✅ | Supabase connection string — **Transaction pooler (6543)** on Vercel; **Session pooler (5432)** locally for migrations |
 | `GEMINI_API_KEY` | ✅ | Gemini REST key |
 | `CRON_SECRET` | ✅ | bearer that guards the report cron |
 | `WEBHOOK_SECRET` | ✅ | secret token Telegram echoes back on every webhook call (verified server-side) |
 | `WEBHOOK_URL` | ✅ | deployment base URL, e.g. `https://poppata-bot.vercel.app` |
 | `GEMINI_MODEL` | — | defaults to `gemini-2.0-flash` |
-| `BABY_NAME` | — | shown in report headers |
+| `MAX_CHATS` | — | max chats that may self-register (default `5`) |
+| `REPO_ISSUES_URL` | — | base repo issues URL for the "bot full" request-access link (default `https://github.com/albertodeago/poppata-bot/issues`) |
 
-`.env.sample` lists them for local use. **Timezone (`Europe/Rome`) is a code constant, not an env var.**
+`.env.sample` lists them for local use. Chats are configured **at runtime** (`/start`, `/nome`), not via env. **Timezone (`Europe/Rome`) is a code constant, not an env var.**
 
 ---
 
@@ -193,7 +212,8 @@ curl -H "Authorization: Bearer <CRON_SECRET>" "https://<your-app>.vercel.app/api
 ## Troubleshooting
 
 - **Bot doesn't react to free text (but `/commands` work):** privacy mode is still on. `@BotFather → /setprivacy → Disable`, then remove & re-add the bot to the group (or make it admin).
-- **Bot does nothing at all, no error:** `ALLOWED_CHAT_ID` is wrong — every update from any other chat is silently dropped. Re-check it via `getUpdates`.
+- **Bot does nothing at all, no error:** the chat isn't registered — send `/start` (or re-add the bot). Unregistered chats are silently dropped. If it's a fresh add that got no welcome, `my_chat_member` isn't in the webhook's `allowed_updates`: re-run `/api/setup`.
+- **`/start` says the bot is full:** the deployment is at `MAX_CHATS`. Raise it, or run `npm run enable-chat -- <chatId> [nome]` for that chat.
 - **`/api/setup` or messages return 500:** open **Vercel → deployment → Logs**. Common causes: an env var missing (`… is not set`) or set without a redeploy; a `pg` connection error (wrong `DATABASE_URL`, or migrations not run).
 - **Webhook shows a 401 in `getWebhookInfo`:** `WEBHOOK_SECRET` in Vercel differs from what `/api/setup` registered — fix it and re-run `/api/setup`. Check with:
   ```bash
@@ -214,13 +234,15 @@ src/
   domain/                 pure core — no I/O, no framework imports
     result.ts logger.ts time.ts
     event.ts parse.ts pending.ts session.ts report.ts weight.ts
+    chatConfig.ts registration.ts
     bot.ts commands.ts db.ts
   adapters/               port implementations
-    pg/{event,pending,weight}.ts db/pool.ts
+    pg/{event,pending,weight,chatConfig}.ts db/pool.ts
     telegraf/bot.ts gemini/parse.ts
     memory/* console/* noop/*   (used by dev:local + tests)
   config.ts env.ts dev.ts
 migrations/               node-pg-migrate migration(s)
+scripts/enable-chat.ts    manually register a chat (bypasses the cap)
 test/unit/                Vitest suites (domain + adapters + api guards)
 docs/superpowers/         design spec + implementation plans
 ```

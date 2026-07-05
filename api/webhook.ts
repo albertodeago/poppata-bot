@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { Chat } from "telegraf/types";
 import {
 	handleCallback,
 	handleMessage,
@@ -14,9 +15,9 @@ import {
 	scalettaCommand,
 	senoCommand,
 	settimanaCommand,
-	startCommand,
 	statoCommand,
 } from "../src/domain/commands.js";
+import { nomeCommand, registerChat } from "../src/domain/registration.js";
 import { type Env, makeEnv } from "../src/env.js";
 
 let env: Env;
@@ -27,13 +28,35 @@ const senderName = (from?: {
 	username?: string;
 }): string => from?.first_name ?? from?.username ?? "sconosciuto";
 
+/** Register (or greet) a chat from a webhook ctx — shared by /start and the add-event. */
+const registerFrom = (
+	chat: Chat,
+	from: { first_name?: string; username?: string } | undefined,
+	name?: string,
+): Promise<void> => {
+	const chatTitle = "title" in chat ? chat.title : undefined;
+	return registerChat({
+		chatId: chat.id,
+		userName: senderName(from),
+		...(chatTitle ? { chatTitle } : {}),
+		...(name ? { name } : {}),
+		maxChats: env.config.maxChats,
+		repoIssuesUrl: env.config.repoIssuesUrl,
+	})(env);
+};
+
 const initBot = (): void => {
 	if (initialized) return;
 	env = makeEnv();
 	const bot = env.telegrafBot;
 
 	bot.command("start", async (ctx) => {
-		await startCommand(ctx.chat.id)(env);
+		const name = ctx.message.text.replace(/^\/start(@\S+)?\s*/, "").trim();
+		await registerFrom(ctx.chat, ctx.from, name || undefined);
+	});
+	bot.command("nome", async (ctx) => {
+		const arg = ctx.message.text.replace(/^\/nome(@\S+)?\s*/, "");
+		await nomeCommand(ctx.chat.id, arg)(env);
 	});
 	bot.command("help", async (ctx) => {
 		await helpCommand(ctx.chat.id)(env);
@@ -95,6 +118,19 @@ const initBot = (): void => {
 			at: new Date(),
 		};
 		await handleCallback(cb)(env);
+	});
+
+	// Auto-register + welcome when the bot is added to a chat.
+	bot.on("my_chat_member", async (ctx) => {
+		const { old_chat_member, new_chat_member } = ctx.myChatMember;
+		const wasOut =
+			old_chat_member.status === "left" || old_chat_member.status === "kicked";
+		const isIn =
+			new_chat_member.status === "member" ||
+			new_chat_member.status === "administrator";
+		if (wasOut && isIn) {
+			await registerFrom(ctx.chat, ctx.from);
+		}
 	});
 
 	initialized = true;

@@ -18,6 +18,6 @@
     "allowUnreachableCode": false,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "test/**/*", "api/**/*"],
+  "include": ["src/**/*", "test/**/*", "api/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "vitest.config.mts"]
 }

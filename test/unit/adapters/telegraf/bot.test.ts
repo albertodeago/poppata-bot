@@ -1,17 +1,27 @@
 import type { Telegraf } from "telegraf";
 import { describe, expect, it, vi } from "vitest";
 import { makeTelegrafAdapter } from "../../../../src/adapters/telegraf/bot.js";
+import { success } from "../../../../src/domain/result.js";
 
 const config = {
 	botToken: "b",
-	allowedChatIds: [1, 2],
 	databaseUrl: "d",
 	geminiApiKey: "k",
 	geminiModel: "m",
 	cronSecret: "c",
 	webhookUrl: "w",
 	webhookSecret: "whs",
+	maxChats: 5,
+	repoIssuesUrl: "https://github.com/x/y/issues",
 };
+
+const makeChatConfigRepo = () => ({
+	get: vi.fn(),
+	count: vi.fn(),
+	create: vi.fn(),
+	setBabyName: vi.fn(),
+	listAll: vi.fn(),
+});
 const logger = {
 	info: vi.fn(),
 	warn: vi.fn(),
@@ -39,7 +49,11 @@ const makeFake = () => {
 describe("[TELEGRAF adapter]", () => {
 	it("react calls setMessageReaction with an emoji reaction", async () => {
 		const { Ctor, telegram } = makeFake();
-		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
 		await botEnv.bot.react(1, 100, "👍");
 		expect(telegram.setMessageReaction).toHaveBeenCalledWith(1, 100, [
 			{ type: "emoji", emoji: "👍" },
@@ -48,7 +62,11 @@ describe("[TELEGRAF adapter]", () => {
 
 	it("sendConfirmation builds conf:/ann: inline buttons", async () => {
 		const { Ctor, telegram } = makeFake();
-		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
 		await botEnv.bot.sendConfirmation(1, "Confermi?", "p1");
 		expect(telegram.sendMessage).toHaveBeenCalledWith(1, "Confermi?", {
 			reply_markup: {
@@ -64,7 +82,11 @@ describe("[TELEGRAF adapter]", () => {
 
 	it("sendSidePrompt builds sx:/dx: inline buttons", async () => {
 		const { Ctor, telegram } = makeFake();
-		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
 		await botEnv.bot.sendSidePrompt(1, "Per quale seno? 🤱", "p1");
 		expect(telegram.sendMessage).toHaveBeenCalledWith(1, "Per quale seno? 🤱", {
 			reply_markup: {
@@ -80,7 +102,11 @@ describe("[TELEGRAF adapter]", () => {
 
 	it("sendTypePrompt builds eat:/sleep: inline buttons", async () => {
 		const { Ctor, telegram } = makeFake();
-		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
 		await botEnv.bot.sendTypePrompt(1, "Poppata o nanna? 🍼", "p1");
 		expect(telegram.sendMessage).toHaveBeenCalledWith(
 			1,
@@ -103,22 +129,77 @@ describe("[TELEGRAF adapter]", () => {
 		telegram.editMessageReplyMarkup.mockRejectedValueOnce(
 			new Error("Bad Request: message is not modified"),
 		);
-		const { botEnv } = makeTelegrafAdapter(Ctor)({ config, logger });
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
 		await expect(botEnv.bot.clearKeyboard(1, 100)).resolves.toBeUndefined();
 	});
 
-	it("the allow-list middleware skips other chats and passes any allow-listed chat", async () => {
+	// biome-ignore lint/suspicious/noExplicitAny: hand-rolled ctx doubles
+	type Ctx = any;
+	const getMiddleware = () => {
 		const { Ctor, use } = makeFake();
-		makeTelegrafAdapter(Ctor)({ config, logger }); // config allows chats 1 and 2
+		const chatConfigRepository = makeChatConfigRepo();
+		makeTelegrafAdapter(Ctor)({ config, logger, chatConfigRepository });
 		const middleware = use.mock.calls[0]?.[0] as (
-			ctx: { chat?: { id: number } },
+			ctx: Ctx,
 			next: () => Promise<void>,
 		) => Promise<void>;
+		return { middleware, chatConfigRepository };
+	};
+
+	it("gate passes /start and /help from any chat without a DB lookup", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
 		const next = vi.fn().mockResolvedValue(undefined);
-		await middleware({ chat: { id: 999 } }, next);
-		expect(next).not.toHaveBeenCalled();
-		await middleware({ chat: { id: 1 } }, next);
-		await middleware({ chat: { id: 2 } }, next);
+		await middleware(
+			{ chat: { id: 5 }, updateType: "message", message: { text: "/start" } },
+			next,
+		);
+		await middleware(
+			{ chat: { id: 6 }, updateType: "message", message: { text: "/help" } },
+			next,
+		);
 		expect(next).toHaveBeenCalledTimes(2);
+		expect(chatConfigRepository.get).not.toHaveBeenCalled();
+	});
+
+	it("gate passes my_chat_member (add) from an unregistered chat", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
+		const next = vi.fn().mockResolvedValue(undefined);
+		await middleware({ chat: { id: 6 }, updateType: "my_chat_member" }, next);
+		expect(next).toHaveBeenCalledTimes(1);
+		expect(chatConfigRepository.get).not.toHaveBeenCalled();
+	});
+
+	it("gate drops normal text from an unregistered chat", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
+		chatConfigRepository.get.mockResolvedValue(success(null));
+		const next = vi.fn().mockResolvedValue(undefined);
+		await middleware(
+			{
+				chat: { id: 7 },
+				updateType: "message",
+				message: { text: "poppata dx" },
+			},
+			next,
+		);
+		expect(next).not.toHaveBeenCalled();
+	});
+
+	it("gate passes normal text from a registered chat", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
+		chatConfigRepository.get.mockResolvedValue(success({ chatId: 7 }));
+		const next = vi.fn().mockResolvedValue(undefined);
+		await middleware(
+			{
+				chat: { id: 7 },
+				updateType: "message",
+				message: { text: "poppata dx" },
+			},
+			next,
+		);
+		expect(next).toHaveBeenCalledTimes(1);
 	});
 });

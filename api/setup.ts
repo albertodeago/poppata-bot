@@ -10,6 +10,7 @@ const COMMANDS = [
 	{ command: "annulla", description: "Rimuove l'ultimo evento" },
 	{ command: "seno", description: "Ultimo seno usato" },
 	{ command: "peso", description: "Peso: registra o mostra lo storico" },
+	{ command: "nome", description: "Imposta il nome del bimbo/a" },
 	{ command: "help", description: "Aiuto" },
 ];
 
@@ -21,7 +22,9 @@ export default async function handler(
 		const env = makeEnv();
 		const url = `${env.config.webhookUrl.replace(/\/$/, "")}/api/webhook`;
 		await env.telegrafBot.telegram.setWebhook(url, {
-			allowed_updates: ["message", "callback_query"] as const,
+			// my_chat_member is required for the add-to-group auto-welcome — Telegram
+			// drops any update type not listed here.
+			allowed_updates: ["message", "callback_query", "my_chat_member"] as const,
 			secret_token: env.config.webhookSecret,
 		});
 		await env.telegrafBot.telegram.setMyCommands(COMMANDS);

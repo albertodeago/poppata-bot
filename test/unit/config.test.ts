@@ -3,7 +3,6 @@ import { getConfig } from "../../src/config.js";
 
 const FULL_ENV = {
 	BOT_TOKEN: "tok",
-	ALLOWED_CHAT_ID: "12345",
 	DATABASE_URL: "postgres://x",
 	GEMINI_API_KEY: "gk",
 	CRON_SECRET: "cs",
@@ -17,14 +16,14 @@ describe("[CONFIG] getConfig", () => {
 		saved = { ...process.env };
 		for (const k of [
 			"BOT_TOKEN",
-			"ALLOWED_CHAT_ID",
 			"DATABASE_URL",
 			"GEMINI_API_KEY",
 			"GEMINI_MODEL",
 			"CRON_SECRET",
 			"WEBHOOK_URL",
 			"WEBHOOK_SECRET",
-			"BABY_NAME",
+			"MAX_CHATS",
+			"REPO_ISSUES_URL",
 		]) {
 			delete process.env[k];
 		}
@@ -34,19 +33,11 @@ describe("[CONFIG] getConfig", () => {
 	});
 
 	it("parses a full environment", () => {
-		Object.assign(process.env, FULL_ENV, { BABY_NAME: "Leo" });
-		const c = getConfig();
-		expect(c.botToken).toBe("tok");
-		expect(c.allowedChatIds).toEqual([12345]);
-		expect(c.geminiModel).toBe("gemini-2.0-flash"); // default
-		expect(c.webhookSecret).toBe("whs");
-		expect(c.babyName).toBe("Leo");
-	});
-
-	it("omits babyName when unset", () => {
 		Object.assign(process.env, FULL_ENV);
 		const c = getConfig();
-		expect(c.babyName).toBeUndefined();
+		expect(c.botToken).toBe("tok");
+		expect(c.geminiModel).toBe("gemini-2.0-flash"); // default
+		expect(c.webhookSecret).toBe("whs");
 	});
 
 	it("uses GEMINI_MODEL override when set", () => {
@@ -60,20 +51,27 @@ describe("[CONFIG] getConfig", () => {
 		expect(() => getConfig()).toThrow(/BOT_TOKEN/);
 	});
 
-	it("throws when ALLOWED_CHAT_ID is not numeric", () => {
-		Object.assign(process.env, FULL_ENV, { ALLOWED_CHAT_ID: "nope" });
-		expect(() => getConfig()).toThrow(/ALLOWED_CHAT_ID/);
+	it("defaults maxChats to 5 and repoIssuesUrl to the repo issues URL", () => {
+		Object.assign(process.env, FULL_ENV);
+		const c = getConfig();
+		expect(c.maxChats).toBe(5);
+		expect(c.repoIssuesUrl).toBe(
+			"https://github.com/albertodeago/poppata-bot/issues",
+		);
 	});
 
-	it("parses a comma-separated list of chat ids (with spaces)", () => {
+	it("uses MAX_CHATS and REPO_ISSUES_URL overrides when set", () => {
 		Object.assign(process.env, FULL_ENV, {
-			ALLOWED_CHAT_ID: "-100111, -100222",
+			MAX_CHATS: "20",
+			REPO_ISSUES_URL: "https://github.com/x/y/issues",
 		});
-		expect(getConfig().allowedChatIds).toEqual([-100111, -100222]);
+		const c = getConfig();
+		expect(c.maxChats).toBe(20);
+		expect(c.repoIssuesUrl).toBe("https://github.com/x/y/issues");
 	});
 
-	it("throws when one of several chat ids is not numeric", () => {
-		Object.assign(process.env, FULL_ENV, { ALLOWED_CHAT_ID: "-100111,nope" });
-		expect(() => getConfig()).toThrow(/ALLOWED_CHAT_ID/);
+	it("throws when MAX_CHATS is not a positive number", () => {
+		Object.assign(process.env, FULL_ENV, { MAX_CHATS: "nope" });
+		expect(() => getConfig()).toThrow(/MAX_CHATS/);
 	});
 });

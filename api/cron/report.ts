@@ -19,27 +19,32 @@ export default async function handler(
 
 	try {
 		const env = makeEnv();
-		const babyName = env.config.babyName;
 		const now = new Date();
 		const isMonday = romeNow(now).weekday === 1;
-		const chatIds = env.config.allowedChatIds;
+
+		const listed = await env.chatConfigRepository.listAll();
+		if (!listed.success) {
+			env.logger.error("Cron: listAll failed", listed.error);
+			return res.status(500).json({ error: "Internal server error" });
+		}
+		const chats = listed.data;
 
 		env.logger.info(
-			`Cron report starting: ${chatIds.length} chat(s), weekly=${isMonday}`,
+			`Cron report starting: ${chats.length} chat(s), weekly=${isMonday}`,
 		);
 
-		// Each allow-listed chat gets its own report from its own data.
-		for (const chatId of chatIds) {
-			env.logger.info(`Cron: sending reports to chat ${chatId}`);
-			await sendDailyReport(chatId, now, babyName)(env);
+		// Each registered chat gets its own report from its own data and name.
+		for (const chat of chats) {
+			env.logger.info(`Cron: sending reports to chat ${chat.chatId}`);
+			await sendDailyReport(chat.chatId, now, chat.babyName)(env);
 			if (isMonday) {
-				await sendWeeklyReport(chatId, now, babyName)(env);
+				await sendWeeklyReport(chat.chatId, now, chat.babyName)(env);
 			}
-			env.logger.info(`Cron: reports sent to chat ${chatId}`);
+			env.logger.info(`Cron: reports sent to chat ${chat.chatId}`);
 		}
 		await env.pendingRepository.deleteStale(new Date(now.getTime() - DAY_MS));
 
-		env.logger.info(`Cron report done: ${chatIds.length} chat(s)`);
+		env.logger.info(`Cron report done: ${chats.length} chat(s)`);
 		return res.status(200).json({ ok: true });
 	} catch (error) {
 		console.error("Cron report error:", error);
