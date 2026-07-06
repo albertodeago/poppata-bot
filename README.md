@@ -21,6 +21,7 @@ bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHA
 ## Roadmap
 
 - [ ] mini app telegram that shows graphs / stats
+- [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
 
 ## What it understands
 
