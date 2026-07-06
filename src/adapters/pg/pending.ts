@@ -16,6 +16,7 @@ interface IntentJson {
 	source: string;
 	confidence: number;
 	side?: string;
+	amountMl?: number;
 }
 
 const serializeIntent = (i: Intent): IntentJson => ({
@@ -25,6 +26,7 @@ const serializeIntent = (i: Intent): IntentJson => ({
 	source: i.source,
 	confidence: i.confidence,
 	...(i.side ? { side: i.side } : {}),
+	...(i.amountMl !== undefined ? { amountMl: i.amountMl } : {}),
 });
 
 const deserializeIntent = (o: IntentJson): Intent => {
@@ -36,6 +38,7 @@ const deserializeIntent = (o: IntentJson): Intent => {
 		confidence: o.confidence,
 	};
 	if (o.side) intent.side = o.side as Side;
+	if (o.amountMl !== undefined) intent.amountMl = o.amountMl;
 	return intent;
 };
 
@@ -47,21 +50,26 @@ interface PendingRow {
 	raw_text: string;
 	intent: IntentJson;
 	warning: string;
+	kind: string | null;
 	message_id: string;
 	created_at: Date;
 }
 
-const mapRow = (row: PendingRow): PendingConfirmation => ({
-	id: row.id,
-	chatId: Number(row.chat_id),
-	userId: Number(row.user_id),
-	userName: row.user_name,
-	rawText: row.raw_text,
-	intent: deserializeIntent(row.intent),
-	warning: row.warning,
-	messageId: Number(row.message_id),
-	createdAt: new Date(row.created_at),
-});
+const mapRow = (row: PendingRow): PendingConfirmation => {
+	const p: PendingConfirmation = {
+		id: row.id,
+		chatId: Number(row.chat_id),
+		userId: Number(row.user_id),
+		userName: row.user_name,
+		rawText: row.raw_text,
+		intent: deserializeIntent(row.intent),
+		warning: row.warning,
+		messageId: Number(row.message_id),
+		createdAt: new Date(row.created_at),
+	};
+	if (row.kind === "amount") p.kind = "amount";
+	return p;
+};
 
 export const makePgPendingRepository = (
 	env: DBEnv & LoggerEnv,
@@ -71,8 +79,8 @@ export const makePgPendingRepository = (
 			async () => {
 				const rows = await env.db.query(
 					`INSERT INTO pending_confirmations
-				 (chat_id, user_id, user_name, raw_text, intent, warning, message_id)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7)
+				 (chat_id, user_id, user_name, raw_text, intent, warning, kind, message_id)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 				 RETURNING *`,
 					[
 						p.chatId,
@@ -81,6 +89,7 @@ export const makePgPendingRepository = (
 						p.rawText,
 						JSON.stringify(serializeIntent(p.intent)),
 						p.warning,
+						p.kind ?? null,
 						p.messageId,
 					],
 				);
@@ -96,6 +105,20 @@ export const makePgPendingRepository = (
 				const rows = await env.db.query(
 					`SELECT * FROM pending_confirmations WHERE id = $1`,
 					[id],
+				);
+				return rows[0] ? mapRow(rows[0]) : null;
+			},
+			(e) => e,
+		),
+
+	findAmountPending: (chatId) =>
+		tryCatch(
+			async () => {
+				const rows = await env.db.query(
+					`SELECT * FROM pending_confirmations
+				 WHERE chat_id = $1 AND kind = 'amount'
+				 ORDER BY created_at DESC LIMIT 1`,
+					[chatId],
 				);
 				return rows[0] ? mapRow(rows[0]) : null;
 			},

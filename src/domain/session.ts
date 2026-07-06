@@ -10,9 +10,24 @@ export type Decision =
 const FEED_MAX_MS = 90 * 60_000;
 const SLEEP_MAX_MS = 12 * 60 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
+/** Above this, a bottle amount is confirmed before saving (fat-finger guard). */
+export const BOTTLE_MAX_ML = 300;
 
 export const decide = (intent: Intent, open: BabyEvent | null): Decision => {
-	if (intent.action === "instant") return { kind: "save", intent };
+	if (intent.action === "instant") {
+		if (
+			intent.type === "bottle" &&
+			intent.amountMl !== undefined &&
+			intent.amountMl > BOTTLE_MAX_ML
+		) {
+			return {
+				kind: "confirm",
+				intent,
+				warning: `${LABEL.bottle.charAt(0).toUpperCase()}${LABEL.bottle.slice(1)} di ${intent.amountMl} ml, confermi?`,
+			};
+		}
+		return { kind: "save", intent };
+	}
 
 	if (intent.action === "start") {
 		if (open) {

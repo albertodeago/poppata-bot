@@ -82,6 +82,32 @@ describe("[GEMINI parser]", () => {
 			});
 	});
 
+	it("maps a bottle with its ml amount", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue(
+				geminiOk({
+					type: "bottle",
+					action: "instant",
+					side: "none",
+					hour: -1,
+					minute: 0,
+					amount: 120,
+					confidence: 0.9,
+				}),
+			),
+		);
+		const r = await makeGeminiParser(env).parse("gli ho dato 120 di aggiunta");
+		expect(r.success).toBe(true);
+		if (r.success)
+			expect(r.data).toEqual({
+				type: "bottle",
+				action: "instant",
+				amountMl: 120,
+				confidence: 0.9,
+			});
+	});
+
 	it("returns null for type 'other'", async () => {
 		vi.stubGlobal(
 			"fetch",

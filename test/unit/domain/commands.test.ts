@@ -80,6 +80,10 @@ describe("[COMMANDS] /help", () => {
 		expect(text).toContain("/oggi");
 		expect(text).toContain("/annulla");
 	});
+
+	it("documents bottle feeding", () => {
+		expect(HELP_TEXT.toLowerCase()).toContain("biberon");
+	});
 });
 
 const feed = (

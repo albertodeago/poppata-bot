@@ -71,6 +71,41 @@ describe("[PG event repo]", () => {
 		expect(params?.[4]).toBeNull();
 	});
 
+	it("insert persists amount_ml for a bottle and maps it back", async () => {
+		const db = {
+			query: vi
+				.fn()
+				.mockResolvedValue([
+					row({ type: "bottle", side: null, amount_ml: 100 }),
+				]),
+		};
+		const repo = makePgEventRepository({ db, logger });
+		const r = await repo.insert({
+			chatId: 1,
+			userId: 2,
+			userName: "papà",
+			type: "bottle",
+			startedAt: new Date("2026-07-02T09:00:00Z"),
+			source: "rules",
+			rawText: "biberon 100",
+			messageId: 100,
+			amountMl: 100,
+		});
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data.amountMl).toBe(100);
+		const [sql, params] = db.query.mock.calls[0] ?? [];
+		expect(sql).toContain("amount_ml");
+		expect(params).toContain(100);
+	});
+
+	it("listSince counts bottle among the instant event types", async () => {
+		const db = { query: vi.fn().mockResolvedValue([]) };
+		const repo = makePgEventRepository({ db, logger });
+		await repo.listSince(1, new Date(), new Date());
+		const sql = db.query.mock.calls[0]?.[0] ?? "";
+		expect(sql).toContain("bottle");
+	});
+
 	it("findOpenSession returns null when no rows", async () => {
 		const db = { query: vi.fn().mockResolvedValue([]) };
 		const repo = makePgEventRepository({ db, logger });

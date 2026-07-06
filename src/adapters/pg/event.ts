@@ -22,6 +22,7 @@ interface EventRow {
 	source: string;
 	raw_text: string;
 	message_id: string;
+	amount_ml: number | null;
 	created_at: Date;
 }
 
@@ -40,6 +41,9 @@ const mapRow = (row: EventRow): BabyEvent => {
 	};
 	if (row.side) event.side = row.side as Side;
 	if (row.ended_at) event.endedAt = new Date(row.ended_at);
+	if (row.amount_ml !== null && row.amount_ml !== undefined) {
+		event.amountMl = Number(row.amount_ml);
+	}
 	return event;
 };
 
@@ -51,8 +55,8 @@ export const makePgEventRepository = (
 			async () => {
 				const rows = await env.db.query(
 					`INSERT INTO events
-				 (chat_id, user_id, user_name, type, side, started_at, ended_at, source, raw_text, message_id)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				 (chat_id, user_id, user_name, type, side, started_at, ended_at, source, raw_text, message_id, amount_ml)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 				 RETURNING *`,
 					[
 						event.chatId,
@@ -65,6 +69,7 @@ export const makePgEventRepository = (
 						event.source,
 						event.rawText,
 						event.messageId,
+						event.amountMl ?? null,
 					],
 				);
 				if (!rows[0]) throw new Error("insert returned no row");
@@ -136,7 +141,7 @@ export const makePgEventRepository = (
 				const rows = await env.db.query(
 					`SELECT * FROM events
 				 WHERE chat_id = $1 AND started_at < $3
-				   AND ( (type IN ('pee','poop') AND started_at >= $2)
+				   AND ( (type IN ('pee','poop','bottle') AND started_at >= $2)
 				      OR (type IN ('eat','sleep') AND (ended_at IS NULL OR ended_at > $2)) )
 				 ORDER BY started_at`,
 					[chatId, start, end],
