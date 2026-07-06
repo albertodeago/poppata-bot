@@ -90,4 +90,43 @@ describe("[PG pending repo]", () => {
 		expect(r.success).toBe(true);
 		if (r.success) expect(r.data).toBe(2);
 	});
+
+	it("create persists the kind and serializes intent.amountMl", async () => {
+		const db = { query: vi.fn().mockResolvedValue([row({ kind: "amount" })]) };
+		const repo = makePgPendingRepository({ db, logger });
+		await repo.create({
+			chatId: 1,
+			userId: 2,
+			userName: "papà",
+			rawText: "biberon 400",
+			intent: {
+				type: "bottle",
+				action: "instant",
+				at: new Date("2026-07-02T07:00:00Z"),
+				source: "rules",
+				confidence: 1,
+				amountMl: 400,
+			},
+			warning: "Biberon di 400 ml, confermi?",
+			messageId: 100,
+			kind: "amount",
+		});
+		const params = db.query.mock.calls[0]?.[1];
+		const storedIntent = JSON.parse(params?.[4]);
+		expect(storedIntent.amountMl).toBe(400);
+		// kind is passed as a bound parameter
+		expect(params).toContain("amount");
+	});
+
+	it("findAmountPending queries by chat + amount kind and maps the row", async () => {
+		const db = {
+			query: vi.fn().mockResolvedValue([row({ kind: "amount" })]),
+		};
+		const repo = makePgPendingRepository({ db, logger });
+		const r = await repo.findAmountPending(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data?.kind).toBe("amount");
+		const sql = db.query.mock.calls[0]?.[0] ?? "";
+		expect(sql).toContain("kind");
+	});
 });

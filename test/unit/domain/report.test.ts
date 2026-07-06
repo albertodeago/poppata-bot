@@ -5,6 +5,7 @@ import {
 	aggregateWeekly,
 	formatDaily,
 	formatSchedule,
+	formatWeekly,
 } from "../../../src/domain/report.js";
 import type { TimeWindow } from "../../../src/domain/time.js";
 
@@ -60,6 +61,30 @@ describe("[REPORT] aggregate", () => {
 		expect(s.peeCount).toBe(1);
 		expect(s.poopCount).toBe(1);
 		expect(s.openExcluded).toBe(false);
+	});
+
+	it("sums bottle count and ml within the window", () => {
+		const events: BabyEvent[] = [
+			ev({
+				type: "bottle",
+				amountMl: 100,
+				startedAt: d("2026-07-01T09:00:00+02:00"),
+			}),
+			ev({
+				type: "bottle",
+				amountMl: 90,
+				startedAt: d("2026-07-01T13:00:00+02:00"),
+			}),
+			// outside the window → excluded
+			ev({
+				type: "bottle",
+				amountMl: 60,
+				startedAt: d("2026-07-02T09:00:00+02:00"),
+			}),
+		];
+		const s = aggregate(events, window);
+		expect(s.bottleCount).toBe(2);
+		expect(s.bottleMl).toBe(190);
 	});
 
 	it("clips a session that crosses the window end", () => {
@@ -124,6 +149,47 @@ describe("[REPORT] formatDaily", () => {
 		expect(text).toContain("📊 Ieri");
 		expect(text.toLowerCase()).toContain("aperta");
 	});
+
+	it("renders a bottle line with total ml and count", () => {
+		const s = aggregate(
+			[
+				ev({
+					type: "bottle",
+					amountMl: 100,
+					startedAt: d("2026-07-01T09:00:00+02:00"),
+				}),
+				ev({
+					type: "bottle",
+					amountMl: 90,
+					startedAt: d("2026-07-01T13:00:00+02:00"),
+				}),
+			],
+			window,
+		);
+		const text = formatDaily(s, "📊 Oggi");
+		expect(text).toContain("🥛");
+		expect(text).toContain("190 ml");
+		expect(text).toContain("(2)");
+	});
+});
+
+describe("[REPORT] formatWeekly", () => {
+	it("renders a bottle line with total ml and count", () => {
+		const s = aggregateWeekly(
+			[
+				ev({
+					type: "bottle",
+					amountMl: 120,
+					startedAt: d("2026-07-01T09:00:00+02:00"),
+				}),
+			],
+			window,
+		);
+		const text = formatWeekly(s, "📅 Settimana");
+		expect(text).toContain("🥛");
+		expect(text).toContain("120 ml");
+		expect(text).toContain("(1)");
+	});
 });
 
 describe("[REPORT] formatSchedule", () => {
@@ -163,6 +229,20 @@ describe("[REPORT] formatSchedule", () => {
 		expect(text).toContain("Totali:");
 		expect(text).toContain("🍼 1");
 		expect(text).toContain("💩 1");
+	});
+
+	it("lists a bottle with its ml and includes it in the totals", () => {
+		const events: BabyEvent[] = [
+			ev({
+				type: "bottle",
+				amountMl: 100,
+				startedAt: d("2026-07-01T09:20:00+02:00"),
+			}),
+		];
+		const text = formatSchedule(events, window);
+		expect(text).toContain("biberon");
+		expect(text).toContain("100 ml");
+		expect(text).toContain("🥛");
 	});
 
 	it("shows an open session as in-progress and excludes it from totals", () => {

@@ -1,6 +1,6 @@
 import type { Result } from "./result.js";
 
-export type EventType = "eat" | "sleep" | "pee" | "poop";
+export type EventType = "eat" | "sleep" | "pee" | "poop" | "bottle";
 export type Side = "dx" | "sx";
 export type EventSource = "rules" | "gemini";
 
@@ -11,10 +11,12 @@ export interface BabyEvent {
 	userName: string;
 	type: EventType;
 	side?: Side;
-	/** For eat/sleep: session start. For pee/poop: the instant. */
+	/** For eat/sleep: session start. For pee/poop/bottle: the instant. */
 	startedAt: Date;
 	/** eat/sleep when closed; absent while open or for instant events. */
 	endedAt?: Date;
+	/** Millilitres given — bottle events only. */
+	amountMl?: number;
 	source: EventSource;
 	rawText: string;
 	messageId: number;
@@ -59,6 +61,7 @@ export const LABEL: Record<EventType, string> = {
 	sleep: "nanna",
 	pee: "pipì",
 	poop: "cacca",
+	bottle: "biberon",
 };
 
 /** Human display for a side — bot copy uses these, storage stays dx/sx. */

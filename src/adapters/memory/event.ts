@@ -77,7 +77,7 @@ export const makeMemoryEventRepository = ({
 			const e = end.getTime();
 			const rows = events.filter((ev) => {
 				if (ev.chatId !== chatId) return false;
-				if (ev.type === "pee" || ev.type === "poop") {
+				if (ev.type === "pee" || ev.type === "poop" || ev.type === "bottle") {
 					const t = ev.startedAt.getTime();
 					return t >= s && t < e;
 				}

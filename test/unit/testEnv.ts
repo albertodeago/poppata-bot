@@ -5,6 +5,7 @@ import type { EventEnv } from "../../src/domain/event.js";
 import type { LoggerEnv } from "../../src/domain/logger.js";
 import type { ParserEnv } from "../../src/domain/parse.js";
 import type { PendingEnv } from "../../src/domain/pending.js";
+import { success } from "../../src/domain/result.js";
 import type { WeightEnv } from "../../src/domain/weight.js";
 
 export const makeTestEnv = () => {
@@ -32,6 +33,8 @@ export const makeTestEnv = () => {
 		pendingRepository: {
 			create: vi.fn<PendingEnv["pendingRepository"]["create"]>(),
 			get: vi.fn<PendingEnv["pendingRepository"]["get"]>(),
+			findAmountPending:
+				vi.fn<PendingEnv["pendingRepository"]["findAmountPending"]>(),
 			delete: vi.fn<PendingEnv["pendingRepository"]["delete"]>(),
 			deleteStale: vi.fn<PendingEnv["pendingRepository"]["deleteStale"]>(),
 		},
@@ -42,6 +45,7 @@ export const makeTestEnv = () => {
 			sendConfirmation: vi.fn<BotEnv["bot"]["sendConfirmation"]>(),
 			sendSidePrompt: vi.fn<BotEnv["bot"]["sendSidePrompt"]>(),
 			sendTypePrompt: vi.fn<BotEnv["bot"]["sendTypePrompt"]>(),
+			sendFeedTypePrompt: vi.fn<BotEnv["bot"]["sendFeedTypePrompt"]>(),
 			answerCallback: vi.fn<BotEnv["bot"]["answerCallback"]>(),
 			clearKeyboard: vi.fn<BotEnv["bot"]["clearKeyboard"]>(),
 		},
@@ -69,6 +73,10 @@ export const makeTestEnv = () => {
 		bot: mocks.bot,
 		logger: mocks.logger,
 	};
+
+	// Default: no open "quanti ml?" question. Every handleMessage checks this,
+	// so give it a safe default; tests that exercise the flow override it.
+	mocks.pendingRepository.findAmountPending.mockResolvedValue(success(null));
 
 	return { mocks, env };
 };

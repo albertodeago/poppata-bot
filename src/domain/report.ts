@@ -7,6 +7,8 @@ export interface DailyStats {
 	feedCount: number;
 	feedDx: number;
 	feedSx: number;
+	bottleCount: number;
+	bottleMl: number;
 	peeCount: number;
 	poopCount: number;
 	openExcluded: boolean;
@@ -34,6 +36,8 @@ export const aggregate = (events: BabyEvent[], w: TimeWindow): DailyStats => {
 		feedCount: 0,
 		feedDx: 0,
 		feedSx: 0,
+		bottleCount: 0,
+		bottleMl: 0,
 		peeCount: 0,
 		poopCount: 0,
 		openExcluded: false,
@@ -46,6 +50,13 @@ export const aggregate = (events: BabyEvent[], w: TimeWindow): DailyStats => {
 		}
 		if (e.type === "poop") {
 			if (inWindow(e.startedAt, w)) s.poopCount++;
+			continue;
+		}
+		if (e.type === "bottle") {
+			if (inWindow(e.startedAt, w)) {
+				s.bottleCount++;
+				s.bottleMl += e.amountMl ?? 0;
+			}
 			continue;
 		}
 		// eat / sleep
@@ -120,6 +131,7 @@ export const formatDaily = (s: DailyStats, title: string): string => {
 		"",
 		`😴 Sonno: ${formatDuration(s.sleepMs)}`,
 		`🍼 Poppate: ${formatDuration(s.eatMs)} (${s.feedCount} — dx ${s.feedDx}, sx ${s.feedSx})`,
+		`🥛 Biberon: ${s.bottleMl} ml (${s.bottleCount})`,
 		`💧 Pipì: ${s.peeCount}`,
 		`💩 Cacca: ${s.poopCount}`,
 	];
@@ -133,6 +145,7 @@ export const formatWeekly = (s: WeeklyStats, title: string): string => {
 		`😴 Sonno: ${formatDuration(s.sleepMs)} (più lungo: ${formatDuration(s.longestSleepMs)})`,
 		`🍼 Poppate: ${formatDuration(s.eatMs)} (${s.feedCount} — dx ${s.feedDx}, sx ${s.feedSx})`,
 		`   media poppata: ${formatDuration(s.avgFeedMs)}, intervallo medio: ${formatDuration(s.avgFeedGapMs)}`,
+		`🥛 Biberon: ${s.bottleMl} ml (${s.bottleCount})`,
 		`💧 Pipì: ${s.peeCount}`,
 		`💩 Cacca: ${s.poopCount}`,
 	];
@@ -144,6 +157,7 @@ export const formatWeekly = (s: WeeklyStats, title: string): string => {
 const scheduleBody = (e: BabyEvent): string => {
 	if (e.type === "pee") return `💧 ${LABEL.pee}`;
 	if (e.type === "poop") return `💩 ${LABEL.poop}`;
+	if (e.type === "bottle") return `🥛 ${LABEL.bottle} ${e.amountMl ?? 0} ml`;
 	const icon = e.type === "eat" ? "🍼" : "😴";
 	const side = e.type === "eat" && e.side ? ` ${e.side}` : "";
 	const label = `${icon}${side}`.padEnd(6);
@@ -165,6 +179,6 @@ export const formatSchedule = (
 		.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 		.map((e) => `${hhmm(e.startedAt).padStart(5)}  ${scheduleBody(e)}`);
 	const s = aggregate(events, window);
-	const footer = `Totali: 🍼 ${s.feedCount} · 😴 ${formatDuration(s.sleepMs)} · 💧 ${s.peeCount} · 💩 ${s.poopCount}`;
+	const footer = `Totali: 🍼 ${s.feedCount} · 🥛 ${s.bottleMl} ml · 😴 ${formatDuration(s.sleepMs)} · 💧 ${s.peeCount} · 💩 ${s.poopCount}`;
 	return `<pre>${[header, "", ...rows, "", footer].join("\n")}</pre>`;
 };

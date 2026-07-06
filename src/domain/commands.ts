@@ -33,6 +33,7 @@ export const HELP_TEXT = [
 	"🍼 poppata dx 9.15 — inizio (dx/sx; se manca te lo chiedo)",
 	"⏹️ fine 9.40 — chiude poppata o nanna aperta",
 	"😴 nanna 10 — inizio nanna",
+	'🥛 biberon 100 — latte artificiale in ml (o "bibe" e ti chiedo i ml)',
 	"💧 pipì · 💩 cacca — eventi istantanei",
 	"",
 	"<b>Comandi</b>",

@@ -27,6 +27,16 @@ export const makeMemoryPendingRepository = ({
 		get: async (id: string) => {
 			return R.success(rows.find((r) => r.id === id) ?? null);
 		},
+		findAmountPending: async (chatId: number) => {
+			let latest: PendingConfirmation | null = null;
+			for (const r of rows) {
+				if (r.chatId !== chatId || r.kind !== "amount") continue;
+				if (!latest || r.createdAt.getTime() > latest.createdAt.getTime()) {
+					latest = r;
+				}
+			}
+			return R.success(latest);
+		},
 		delete: async (id: string) => {
 			rows = rows.filter((r) => r.id !== id);
 			return R.success(undefined);

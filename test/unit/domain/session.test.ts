@@ -38,6 +38,23 @@ describe("[SESSION] decide", () => {
 		expect(d.kind).toBe("save");
 	});
 
+	it("a normal-size bottle saves", () => {
+		const d = decide(
+			intent({ type: "bottle", action: "instant", amountMl: 100 }),
+			null,
+		);
+		expect(d.kind).toBe("save");
+	});
+
+	it("an unusually large bottle asks to confirm", () => {
+		const d = decide(
+			intent({ type: "bottle", action: "instant", amountMl: 400 }),
+			null,
+		);
+		expect(d.kind).toBe("confirm");
+		if (d.kind === "confirm") expect(d.warning).toContain("400 ml");
+	});
+
 	it("start while a session is open asks to confirm", () => {
 		const d = decide(intent({ action: "start", type: "sleep" }), openEat);
 		expect(d.kind).toBe("confirm");

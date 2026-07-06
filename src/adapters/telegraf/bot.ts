@@ -90,6 +90,18 @@ export const makeTelegrafAdapter =
 						},
 					});
 				},
+				sendFeedTypePrompt: async (chatId, text, pendingId) => {
+					await bot.telegram.sendMessage(chatId, text, {
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{ text: "🍼 Poppata", callback_data: `eat:${pendingId}` },
+									{ text: "🥛 Biberon", callback_data: `bottle:${pendingId}` },
+								],
+							],
+						},
+					});
+				},
 				answerCallback: async (callbackId, text) => {
 					await bot.telegram.answerCbQuery(callbackId, text);
 				},

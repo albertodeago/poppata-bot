@@ -6,11 +6,15 @@ import { success } from "../../domain/result.js";
 const RESPONSE_SCHEMA = {
 	type: "object",
 	properties: {
-		type: { type: "string", enum: ["eat", "sleep", "pee", "poop", "other"] },
+		type: {
+			type: "string",
+			enum: ["eat", "sleep", "pee", "poop", "bottle", "other"],
+		},
 		action: { type: "string", enum: ["start", "end", "instant"] },
 		side: { type: "string", enum: ["dx", "sx", "none"] },
 		hour: { type: "integer" },
 		minute: { type: "integer" },
+		amount: { type: "integer" },
 		confidence: { type: "number" },
 	},
 	required: ["type", "action", "confidence"],
@@ -18,10 +22,11 @@ const RESPONSE_SCHEMA = {
 
 const PROMPT = [
 	"Sei un parser per un bot che traccia le attività di un neonato.",
-	"Classifica il messaggio in un'attività: eat (poppata), sleep (nanna), pee (pipì), poop (cacca).",
-	"action: start (inizio), end (fine); pee e poop sono sempre instant.",
+	"Classifica il messaggio in un'attività: eat (poppata al seno), sleep (nanna), pee (pipì), poop (cacca), bottle (biberon/latte artificiale).",
+	"action: start (inizio), end (fine); pee, poop e bottle sono sempre instant.",
 	'side: dx o sx solo per eat, altrimenti "none".',
 	"Se il messaggio indica un orario, imposta hour (0-23) e minute (0-59); altrimenti hour = -1.",
+	"amount: per bottle, i millilitri di latte (intero); altrimenti -1.",
 	"confidence: da 0 a 1.",
 	'Se il messaggio NON riguarda nessuna di queste attività, type = "other".',
 	"Messaggio:",
@@ -33,6 +38,7 @@ interface RawGemini {
 	side?: string;
 	hour?: number;
 	minute?: number;
+	amount?: number;
 	confidence: number;
 }
 
@@ -109,6 +115,9 @@ export const makeGeminiParser = (
 			if (typeof parsed.hour === "number" && parsed.hour >= 0) {
 				result.hour = parsed.hour;
 				result.minute = typeof parsed.minute === "number" ? parsed.minute : 0;
+			}
+			if (typeof parsed.amount === "number" && parsed.amount >= 0) {
+				result.amountMl = parsed.amount;
 			}
 			return { retry: false, result };
 		} catch (e) {

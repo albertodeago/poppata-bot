@@ -11,6 +11,8 @@ export interface Intent {
 	at: Date;
 	source: EventSource;
 	confidence: number;
+	/** Millilitres given — bottle intents only. */
+	amountMl?: number;
 }
 
 /** Rules-parser output, before time resolution. */
@@ -22,6 +24,11 @@ export interface ParsedTokens {
 	minute: number;
 	hasTime: boolean;
 	confidence: number;
+	/** Millilitres given — bottle only. */
+	amountMl?: number;
+	/** A generic feed word (mangia/pappa/latte) with no breast-or-bottle signal:
+	 *  the caller asks "poppata o biberon?" instead of guessing. */
+	ambiguousFeed?: boolean;
 }
 
 /** Shape the LLM fallback must return (Plan 2 supplies the Gemini adapter). */
@@ -31,6 +38,8 @@ export interface GeminiParse {
 	side?: Side;
 	hour?: number;
 	minute?: number;
+	/** Millilitres — bottle only. */
+	amountMl?: number;
 	confidence: number;
 }
 
@@ -48,7 +57,18 @@ export const normalize = (text: string): string =>
 		.toLowerCase()
 		.trim();
 
-const EAT = /\b(poppata|allatta(?:mento)?|tetta|latte|poppa)\b/;
+// Bottle (formula) feeding — instant, carries a ml amount. The verb forms
+// `ciuccia`/`ciucciato`/`ciucciata` count; the pacifier nouns
+// `ciuccio`/`ciuccetto`/`ciucci` deliberately don't (word-boundary match on
+// `ciuccia` won't touch a word ending in -o/-i, and they aren't in `ciucciat…`).
+const BOTTLE = /\b(biberon|bibe|bibbe|ciuccia|ciucciat\w*)\b/;
+// Explicit breast feeding. `latte` is intentionally NOT here — on its own it's
+// breast-or-bottle ambiguous, so it lives in GENERIC_EAT.
+const EAT = /\b(poppata|allatta(?:mento)?|tetta|poppa)\b/;
+// Generic feeding words that don't say breast vs bottle. Combined with a breast
+// context (side / `seno`) they mean poppata; otherwise the bot asks which.
+const GENERIC_EAT = /\b(mangia\w*|pappa|latte)\b/;
+const SENO = /\bseno\b/;
 // `mamma` is a frequent mistype/mishearing of `nanna` (same shape, m↔n) — treat
 // it as a sleep keyword so "inizio mamma 3.32" logs a nap, not a feed.
 const SLEEP = /\b(nanna|mamma|dorme|dormit\w*|sonnellino|sleep)\b/;
@@ -81,9 +101,13 @@ export const hasBabySignal = (t: string): boolean =>
 	END.test(t) ||
 	SIDE_DX.test(t) ||
 	SIDE_SX.test(t) ||
+	BOTTLE.test(t) ||
+	GENERIC_EAT.test(t) ||
 	EXTRA_SIGNAL.test(t);
 
+// Bottle is checked first so "biberon di latte" is a bottle, not a breast feed.
 const detectType = (t: string): EventType | undefined => {
+	if (BOTTLE.test(t)) return "bottle";
 	if (EAT.test(t)) return "eat";
 	if (SLEEP.test(t)) return "sleep";
 	if (PEE.test(t)) return "pee";
@@ -101,6 +125,22 @@ const detectTime = (
 	const bare = t.match(/\b(\d{1,2})\b/);
 	if (bare?.[1]) return { hour: Number(bare[1]), minute: 0 };
 	return undefined;
+};
+
+/** Clock time written with a separator only (9.15 / 9:15 / 9h15). */
+const detectSeparatorTime = (
+	t: string,
+): { hour: number; minute: number } | undefined => {
+	const m = t.match(/(\d{1,2})[.:h](\d{1,2})/);
+	if (m?.[1] && m[2]) return { hour: Number(m[1]), minute: Number(m[2]) };
+	return undefined;
+};
+
+/** A standalone 1–3 digit integer = a bottle's ml. The separator-time (if any)
+ *  is stripped first so its digits aren't mistaken for the amount. */
+const detectAmount = (t: string): number | undefined => {
+	const m = t.replace(/(\d{1,2})[.:h](\d{1,2})/, " ").match(/\b(\d{1,3})\b/);
+	return m?.[1] ? Number(m[1]) : undefined;
 };
 
 /** True iff the two strings are within Levenshtein edit distance 1. */
@@ -142,6 +182,7 @@ const FUZZY_STOP = new Set([
 	"pupa", // ~ pupu
 	"cacao", // (already distance ≥2, listed for clarity)
 	"piscina",
+	"pappa", // ~ poppa, but it's a generic feed word → handled as ambiguous, not eat
 ]);
 
 // Curated, distinctive keywords per type for typo tolerance. Short/common words
@@ -181,7 +222,6 @@ const fuzzyType = (token: string): EventType | undefined => {
  */
 export const parseRules = (text: string): ParsedTokens => {
 	let type = detectType(text);
-	const time = detectTime(text);
 	const hasEnd = END.test(text);
 	const hasStart = START.test(text);
 
@@ -196,17 +236,32 @@ export const parseRules = (text: string): ParsedTokens => {
 		}
 	}
 
-	let action: Action | undefined;
-	if (type === "pee" || type === "poop") action = "instant";
-	else if (hasEnd) action = "end";
-	else if (hasStart) action = "start";
-	else if (type === "eat" || type === "sleep") action = "start";
-
 	const side: Side | undefined = SIDE_DX.test(text)
 		? "dx"
 		: SIDE_SX.test(text)
 			? "sx"
 			: undefined;
+
+	// A generic feed word with no explicit type: a breast context (side / `seno`)
+	// makes it a poppata; otherwise it's ambiguous and the caller asks which.
+	let ambiguousFeed = false;
+	if (type === undefined && GENERIC_EAT.test(text)) {
+		if (side !== undefined || SENO.test(text)) type = "eat";
+		else ambiguousFeed = true;
+	}
+
+	// A bottle or an ambiguous feed treats a bare number as a ml amount / nothing,
+	// not a clock time; only a separator (9.15) is a time there.
+	const separatorOnly = type === "bottle" || ambiguousFeed;
+	const time = separatorOnly ? detectSeparatorTime(text) : detectTime(text);
+	const amountMl = type === "bottle" ? detectAmount(text) : undefined;
+
+	let action: Action | undefined;
+	if (type === "pee" || type === "poop" || type === "bottle")
+		action = "instant";
+	else if (hasEnd) action = "end";
+	else if (hasStart) action = "start";
+	else if (type === "eat" || type === "sleep") action = "start";
 
 	const confident = type !== undefined || action === "end";
 
@@ -222,5 +277,7 @@ export const parseRules = (text: string): ParsedTokens => {
 		tokens.hour = time.hour;
 		tokens.minute = time.minute;
 	}
+	if (amountMl !== undefined) tokens.amountMl = amountMl;
+	if (ambiguousFeed) tokens.ambiguousFeed = true;
 	return tokens;
 };

@@ -45,6 +45,11 @@ export interface BotEnv {
 			text: string,
 			pendingId: string,
 		): Promise<void>;
+		sendFeedTypePrompt(
+			chatId: number,
+			text: string,
+			pendingId: string,
+		): Promise<void>;
 		answerCallback(callbackId: string, text?: string): Promise<void>;
 		clearKeyboard(chatId: number, messageId: number): Promise<void>;
 	};
@@ -86,6 +91,19 @@ const SIDE_PROMPT = "Per quale seno? 🤱";
 const PENDING_TTL_MS = 15 * 60_000;
 const PENDING_EXPIRED = "Scaduto ⏰ — più di 15 minuti, riscrivi il messaggio.";
 const TYPE_PROMPT = "Poppata o nanna? 🍼";
+const FEED_TYPE_PROMPT = "Poppata o biberon? 🍼🥛";
+const AMOUNT_PROMPT = "Quanti ml? 🥛";
+const BOTTLE_ABANDONED = "Ho annullato il biberon di prima: mancavano i ml. 🥛";
+
+/** A bottle-answer message: a bare 1–3 digit number, optionally with "ml". */
+const parseMl = (text: string): number | undefined => {
+	const m = text.trim().match(/^(\d{1,3})\s*(?:ml)?$/i);
+	return m?.[1] ? Number(m[1]) : undefined;
+};
+
+/** A bottle whose ml is still unknown (bare "bibe" / an ambiguous Gemini parse). */
+const needsAmount = (intent: Intent): boolean =>
+	intent.type === "bottle" && intent.amountMl === undefined;
 
 const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	chatId: ctx.chatId,
@@ -97,6 +115,7 @@ const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 	rawText: ctx.rawText,
 	messageId: ctx.messageId,
 	...(intent.side ? { side: intent.side } : {}),
+	...(intent.amountMl !== undefined ? { amountMl: intent.amountMl } : {}),
 });
 
 /** A feed start that still needs its breast side chosen. */
@@ -105,6 +124,8 @@ const needsSide = (intent: Intent): boolean =>
 
 const describeIntent = (intent: Intent): string => {
 	const parts = [LABEL[intent.type]];
+	if (intent.type === "bottle" && intent.amountMl !== undefined)
+		parts.push(`${intent.amountMl} ml`);
 	if (intent.side) parts.push(SIDE_LABEL[intent.side]);
 	if (intent.action === "instant") parts.push(`alle ${hhmm(intent.at)}`);
 	else
@@ -244,6 +265,103 @@ const promptType = async (
 	await env.bot.sendTypePrompt(ctx.chatId, TYPE_PROMPT, created.data.id);
 };
 
+/** Ask poppata-vs-biberon for a generic feed; the button verb picks the type. */
+const promptFeedType = async (
+	env: BotEnv & PendingEnv & LoggerEnv,
+	ctx: EventContext,
+	at: Date,
+): Promise<void> => {
+	// Placeholder intent; the button verb sets the real type in handleCallback
+	// (eat → poppata start, bottle → instant then asks the ml).
+	const intent: Intent = {
+		type: "eat",
+		action: "start",
+		at,
+		source: "rules",
+		confidence: 1,
+	};
+	const created = await env.pendingRepository.create({
+		chatId: ctx.chatId,
+		userId: ctx.userId,
+		userName: ctx.userName,
+		rawText: ctx.rawText,
+		intent,
+		warning: FEED_TYPE_PROMPT,
+		messageId: ctx.messageId,
+	});
+	if (!created.success) {
+		env.logger.error("create pending (feed type) failed", created.error);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	await env.bot.sendFeedTypePrompt(
+		ctx.chatId,
+		FEED_TYPE_PROMPT,
+		created.data.id,
+	);
+};
+
+/** Stash a bottle awaiting its ml and ask for it; the user's next message answers. */
+const promptAmount = async (
+	env: BotEnv & PendingEnv & LoggerEnv,
+	ctx: EventContext,
+	intent: Intent,
+): Promise<void> => {
+	const created = await env.pendingRepository.create({
+		chatId: ctx.chatId,
+		userId: ctx.userId,
+		userName: ctx.userName,
+		rawText: ctx.rawText,
+		intent,
+		warning: AMOUNT_PROMPT,
+		kind: "amount",
+		messageId: ctx.messageId,
+	});
+	if (!created.success) {
+		env.logger.error("create pending (amount) failed", created.error);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	await env.bot.sendMessage(ctx.chatId, AMOUNT_PROMPT);
+};
+
+/** Apply an answered ml to its bottle: save + echo, or confirm if unusually large. */
+const resolveAmount = async (
+	env: BotEnv & EventEnv & PendingEnv & LoggerEnv,
+	p: PendingConfirmation,
+	ml: number,
+): Promise<void> => {
+	const ctx: EventContext = {
+		chatId: p.chatId,
+		userId: p.userId,
+		userName: p.userName,
+		messageId: p.messageId,
+		rawText: p.rawText,
+	};
+	const intent: Intent = { ...p.intent, amountMl: ml };
+	const decision = decide(intent, null);
+	if (decision.kind === "confirm") {
+		await createPending(env, ctx, decision.intent, decision.warning);
+		return;
+	}
+	if (decision.kind === "error") {
+		// Unreachable for an instant bottle, but keep the type total.
+		env.logger.error(
+			"resolveAmount: unexpected decide error",
+			decision.message,
+		);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	const applied = await applyIntent(decision.intent, ctx)(env);
+	if (!applied.success) {
+		env.logger.error("applyIntent (amount) failed", applied.error);
+		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		return;
+	}
+	await env.bot.sendMessage(ctx.chatId, bottleEcho(decision.intent));
+};
+
 const sendDurationReply = async (
 	env: BotEnv,
 	chatId: number,
@@ -266,6 +384,10 @@ const startedText = (intent: Intent): string => {
 	if (intent.side) text += ` — seno ${SIDE_LABEL[intent.side]}`;
 	return text;
 };
+
+/** "🥛 Biberon 100 ml alle 14:30 ✅" — feedback for a saved bottle. */
+const bottleEcho = (intent: Intent): string =>
+	`🥛 ${cap(LABEL.bottle)} ${intent.amountMl ?? 0} ml alle ${hhmm(intent.at)} ✅`;
 
 const save = async (
 	env: BotEnv & EventEnv & LoggerEnv,
@@ -293,6 +415,11 @@ const save = async (
 		await env.bot.sendMessage(ctx.chatId, startedText(intent));
 		return;
 	}
+	// A bottle echoes its ml + time so the recorded amount is visible.
+	if (intent.type === "bottle") {
+		await env.bot.sendMessage(ctx.chatId, bottleEcho(intent));
+		return;
+	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
 };
 
@@ -310,6 +437,10 @@ const feedbackFor = async (
 	}
 	if (p.intent.action === "start") {
 		await env.bot.sendMessage(p.chatId, `${startedText(p.intent)} ✅`);
+		return;
+	}
+	if (p.intent.type === "bottle") {
+		await env.bot.sendMessage(p.chatId, bottleEcho(p.intent));
 		return;
 	}
 	// react on the ORIGINAL user message (instant events)
@@ -379,6 +510,17 @@ export const handleCallback =
 			return;
 		}
 
+		// Biberon button (from the poppata-or-biberon prompt): make it an instant
+		// bottle and ask for the ml.
+		if (verb === "bottle") {
+			const intent: Intent = { ...p.intent, type: "bottle", action: "instant" };
+			await promptAmount(env, ctx, intent);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.pendingRepository.delete(p.id);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
 		// Type buttons: the verb is authoritative (the stored placeholder type is
 		// ignored). Gate through decide so a start over an open session asks before
 		// closing it (consistent with the text path); otherwise eat → side prompt,
@@ -420,6 +562,15 @@ export const handleCallback =
 			return;
 		}
 
+		// verb === "conf": a confirmed bottle still missing its ml asks for it.
+		if (needsAmount(p.intent)) {
+			await promptAmount(env, ctx, p.intent);
+			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
+			await env.pendingRepository.delete(p.id);
+			await env.bot.answerCallback(cb.id);
+			return;
+		}
+
 		// verb === "conf": a confirmed feed start still missing its side asks for it.
 		if (needsSide(p.intent)) {
 			await promptSide(env, ctx, p.intent, cb.at);
@@ -448,6 +599,27 @@ export const handleMessage =
 	): Promise<void> => {
 		const arrival = romeNow(msg.at);
 		const normalized = normalize(msg.text);
+
+		// An open "quanti ml?" question consumes the next message: a bare number
+		// answers it; anything else abandons it (with a heads-up) and is then
+		// processed as usual.
+		const amountPending = await env.pendingRepository.findAmountPending(
+			msg.chatId,
+		);
+		if (!amountPending.success) {
+			env.logger.error("findAmountPending failed", amountPending.error);
+		} else if (amountPending.data) {
+			const p = amountPending.data;
+			await env.pendingRepository.delete(p.id);
+			const ml = parseMl(msg.text);
+			if (ml !== undefined) {
+				await resolveAmount(env, p, ml);
+				return;
+			}
+			await env.bot.sendMessage(msg.chatId, BOTTLE_ABANDONED);
+			// fall through: handle this message as usual
+		}
+
 		if (LAST_FEED_QUERY.test(normalized)) {
 			await answerLastFeed(msg.chatId, msg.at)(env);
 			return;
@@ -458,8 +630,36 @@ export const handleMessage =
 		}
 		const tokens = parseRules(normalized);
 
-		let { type, action, side, hour, minute, hasTime, confidence } = tokens;
+		let {
+			type,
+			action,
+			side,
+			hour,
+			minute,
+			hasTime,
+			confidence,
+			amountMl,
+			ambiguousFeed,
+		} = tokens;
 		let source: EventSource = "rules";
+
+		// A generic feed word (mangia/pappa/latte) with no breast/bottle signal:
+		// ask poppata vs biberon instead of letting Gemini guess. Deterministic.
+		if (ambiguousFeed) {
+			const at =
+				hasTime && hour !== undefined
+					? resolveClock(arrival, hour, minute).toJSDate()
+					: arrival.toJSDate();
+			const feedCtx: EventContext = {
+				chatId: msg.chatId,
+				userId: msg.userId,
+				userName: msg.userName,
+				messageId: msg.messageId,
+				rawText: msg.text,
+			};
+			await promptFeedType(env, feedCtx, at);
+			return;
+		}
 
 		// A start with no type ("inizio", "comincia 9.15"): ask poppata vs nanna
 		// with buttons instead of guessing. Deterministic — skips the Gemini fallback.
@@ -490,6 +690,7 @@ export const handleMessage =
 				hasTime = d.hour !== undefined;
 				hour = d.hour;
 				minute = d.minute ?? 0;
+				amountMl = d.amountMl;
 				confidence = d.confidence;
 			}
 		}
@@ -541,6 +742,7 @@ export const handleMessage =
 			source,
 			confidence,
 			...(side ? { side } : {}),
+			...(amountMl !== undefined ? { amountMl } : {}),
 		};
 
 		const ctx: EventContext = {
@@ -576,6 +778,10 @@ export const handleMessage =
 				await createPending(env, ctx, decision.intent, decision.warning);
 				return;
 			case "save":
+				if (needsAmount(decision.intent)) {
+					await promptAmount(env, ctx, decision.intent);
+					return;
+				}
 				if (needsSide(decision.intent)) {
 					await promptSide(env, ctx, decision.intent, msg.at);
 					return;

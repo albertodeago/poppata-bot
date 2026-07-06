@@ -110,7 +110,9 @@ describe("[BOT] handleMessage", () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.parser.parse.mockResolvedValue(success(null));
 
-		await handleMessage(msg("ha mangiato tanto"))(env);
+		// A baby-word that isn't a feed keyword (so it doesn't ask poppata/biberon)
+		// and doesn't otherwise parse → the gentle help hint.
+		await handleMessage(msg("attaccato al seno"))(env);
 
 		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
 		expect(text.toLowerCase()).toContain("/help");
@@ -393,6 +395,166 @@ describe("[BOT] handleMessage", () => {
 		const created = mocks.pendingRepository.create.mock.calls[0]?.[0];
 		expect(created?.intent.at).toEqual(new Date("2026-07-02T09:15:00+02:00"));
 		expect(created?.intent.action).toBe("start");
+	});
+});
+
+describe("[BOT] bottle", () => {
+	const amountPending = (
+		over: Partial<PendingConfirmation> = {},
+	): PendingConfirmation => ({
+		id: "pa1",
+		chatId: 1,
+		userId: 1,
+		userName: "papà",
+		rawText: "bibe",
+		intent: {
+			type: "bottle",
+			action: "instant",
+			at: new Date("2026-07-02T09:30:00+02:00"),
+			source: "rules",
+			confidence: 1,
+		},
+		warning: "Quanti ml? 🥛",
+		kind: "amount",
+		messageId: 100,
+		createdAt: new Date("2026-07-02T09:30:00+02:00"),
+		...over,
+	});
+
+	it("logs an inline bottle directly and echoes ml + time", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "b1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("biberon 100"))(env);
+
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		const inserted = mocks.eventRepository.insert.mock.calls[0]?.[0];
+		expect(inserted?.type).toBe("bottle");
+		expect(inserted?.amountMl).toBe(100);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("100 ml");
+		expect(text).toContain("✅");
+		expect(mocks.bot.react).not.toHaveBeenCalled();
+	});
+
+	it("asks 'quanti ml?' for a bare bottle keyword and stores an amount pending", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pa1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("bibe"))(env);
+
+		expect(mocks.pendingRepository.create).toHaveBeenCalledTimes(1);
+		expect(mocks.pendingRepository.create.mock.calls[0]?.[0]?.kind).toBe(
+			"amount",
+		);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text.toLowerCase()).toContain("ml");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("asks poppata-or-biberon for a generic feeding word", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pf1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("ha mangiato"))(env);
+
+		expect(mocks.bot.sendFeedTypePrompt).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("biberon"),
+			"pf1",
+		);
+		expect(mocks.parser.parse).not.toHaveBeenCalled();
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("resolves an open ml question from a bare number answer", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.findAmountPending.mockResolvedValue(
+			success(amountPending()),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "b1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("100"))(env);
+
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pa1");
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		const inserted = mocks.eventRepository.insert.mock.calls[0]?.[0];
+		expect(inserted?.type).toBe("bottle");
+		expect(inserted?.amountMl).toBe(100);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("100 ml");
+	});
+
+	it("abandons the ml question on a non-number, warns, then processes the message", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.findAmountPending.mockResolvedValue(
+			success(amountPending()),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.eventRepository.insert.mockImplementation(async (e) =>
+			success({ ...e, id: "s1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("nanna 10"))(env);
+
+		// the stale bottle question is dropped and the user is told
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pa1");
+		const warn = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(warn.toLowerCase()).toContain("biberon");
+		// and the "nanna 10" is still logged
+		expect(mocks.eventRepository.insert).toHaveBeenCalledTimes(1);
+		expect(mocks.eventRepository.insert.mock.calls[0]?.[0]?.type).toBe("sleep");
+	});
+
+	it("asks to confirm an unusually large inline amount instead of saving", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pc1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("biberon 400"))(env);
+
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("400 ml"),
+			"pc1",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+	});
+
+	it("asks to confirm a large amount answered via the ml question", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.findAmountPending.mockResolvedValue(
+			success(amountPending()),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pc2", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("400"))(env);
+
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pa1");
+		expect(mocks.bot.sendConfirmation).toHaveBeenCalledWith(
+			1,
+			expect.stringContaining("400 ml"),
+			"pc2",
+		);
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
 });
 
@@ -718,6 +880,42 @@ describe("[BOT] handleCallback", () => {
 		expect(mocks.bot.sendSidePrompt).not.toHaveBeenCalled();
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pt1");
+	});
+
+	it("choosing biberon from the feed-type prompt asks for the ml", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.pendingRepository.get.mockResolvedValue(
+			success(
+				pending({
+					id: "pf1",
+					rawText: "mangiato",
+					intent: {
+						type: "eat",
+						action: "start",
+						at: new Date("2026-07-02T09:30:00+02:00"),
+						source: "rules",
+						confidence: 1,
+					},
+					warning: "Poppata o biberon? 🍼🥛",
+				}),
+			),
+		);
+		mocks.pendingRepository.delete.mockResolvedValue(success(undefined));
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pa9", createdAt: new Date() }),
+		);
+
+		await handleCallback(cb("bottle:pf1"))(env);
+
+		const created = mocks.pendingRepository.create.mock.calls[0]?.[0];
+		expect(created?.kind).toBe("amount");
+		expect(created?.intent.type).toBe("bottle");
+		expect(created?.intent.action).toBe("instant");
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text.toLowerCase()).toContain("ml");
+		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
+		expect(mocks.pendingRepository.delete).toHaveBeenCalledWith("pf1");
+		expect(mocks.bot.clearKeyboard).toHaveBeenCalledWith(1, 200);
 	});
 
 	it("confirming the close ends the open session and starts the new one", async () => {

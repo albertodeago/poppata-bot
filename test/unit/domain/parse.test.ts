@@ -161,6 +161,152 @@ describe("[PARSE] parseRules", () => {
 	}
 });
 
+describe("[PARSE] bottle", () => {
+	const cases: Array<{
+		input: string;
+		expect: Partial<ReturnType<typeof parseRules>>;
+	}> = [
+		{
+			input: "biberon 100",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 100,
+				hasTime: false,
+				confidence: 1,
+			},
+		},
+		{
+			input: "bibe 90",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 90,
+				confidence: 1,
+			},
+		},
+		{
+			input: "bibbe 120",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 120,
+				confidence: 1,
+			},
+		},
+		// "ciuccia <n>" is a bottle; nobody writes a number after the pacifier.
+		{
+			input: "ciuccia 50",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 50,
+				confidence: 1,
+			},
+		},
+		{
+			input: "ciucciato 60",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 60,
+				confidence: 1,
+			},
+		},
+		// bottle keyword wins over the "latte" (eat) keyword
+		{
+			input: "biberon di latte",
+			expect: { type: "bottle", action: "instant", confidence: 1 },
+		},
+		// bare keyword: bottle, no amount yet (the bot will ask "quanti ml?")
+		{
+			input: "biberon",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				hasTime: false,
+				confidence: 1,
+			},
+		},
+		// amount + explicit time: separator = time, bare integer = ml
+		{
+			input: "bibe 90 8.30",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 90,
+				hour: 8,
+				minute: 30,
+				hasTime: true,
+			},
+		},
+		// the pacifier noun must NOT be parsed as a bottle
+		{ input: "ha preso il ciuccio", expect: { confidence: 0 } },
+		{ input: "dov'è il ciuccetto", expect: { confidence: 0 } },
+	];
+
+	for (const c of cases) {
+		it(`parses: "${c.input}"`, () => {
+			expect(parseRules(normalize(c.input))).toMatchObject(c.expect);
+		});
+	}
+
+	it("leaves amountMl undefined for a bare bottle keyword", () => {
+		expect(parseRules(normalize("biberon")).amountMl).toBeUndefined();
+	});
+});
+
+describe("[PARSE] ambiguous feed", () => {
+	// Generic feeding words are breast-or-bottle ambiguous → flagged for a prompt.
+	const ambiguous: Array<{
+		input: string;
+		expect: Partial<ReturnType<typeof parseRules>>;
+	}> = [
+		{ input: "mangiato", expect: { ambiguousFeed: true } },
+		{ input: "ha mangiato", expect: { ambiguousFeed: true } },
+		{ input: "mangia", expect: { ambiguousFeed: true } },
+		{ input: "pappa", expect: { ambiguousFeed: true } },
+		{ input: "latte", expect: { ambiguousFeed: true } },
+		{ input: "latte artificiale", expect: { ambiguousFeed: true } },
+		// separator time is preserved; a bare number is ignored (ml-or-time unclear)
+		{
+			input: "mangiato 9.30",
+			expect: { ambiguousFeed: true, hour: 9, minute: 30, hasTime: true },
+		},
+		{ input: "mangiato 90", expect: { ambiguousFeed: true, hasTime: false } },
+	];
+	for (const c of ambiguous) {
+		it(`flags: "${c.input}"`, () => {
+			const got = parseRules(normalize(c.input));
+			expect(got).toMatchObject(c.expect);
+			expect(got.type).toBeUndefined();
+		});
+	}
+
+	// A breast context (side or "seno") disambiguates a generic word → poppata.
+	it("a side makes a generic word a breast feed", () => {
+		const got = parseRules(normalize("mangiato dx"));
+		expect(got.type).toBe("eat");
+		expect(got.side).toBe("dx");
+		expect(got.ambiguousFeed).toBeFalsy();
+	});
+	it("'seno' makes a generic word a breast feed", () => {
+		const got = parseRules(normalize("ha mangiato al seno"));
+		expect(got.type).toBe("eat");
+		expect(got.ambiguousFeed).toBeFalsy();
+	});
+
+	// Explicit keywords are never ambiguous.
+	it("an explicit breast keyword is not ambiguous", () => {
+		expect(parseRules(normalize("poppata")).ambiguousFeed).toBeFalsy();
+	});
+	it("an explicit bottle keyword is not ambiguous", () => {
+		const got = parseRules(normalize("biberon di latte"));
+		expect(got.type).toBe("bottle");
+		expect(got.ambiguousFeed).toBeFalsy();
+	});
+});
+
 describe("[PARSE] hasBabySignal", () => {
 	// Baby-vocabulary present (including words the parser itself doesn't act on).
 	for (const input of [
@@ -172,6 +318,8 @@ describe("[PARSE] hasBabySignal", () => {
 		"ha mangiato tanto",
 		"che pappa buona",
 		"gli ho dato il biberon",
+		"bibe 90",
+		"ciuccia",
 		"attaccato al seno",
 	]) {
 		it(`true: "${input}"`, () => {

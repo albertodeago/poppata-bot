@@ -94,6 +94,44 @@ describe("[MEMORY event repo]", () => {
 		if (r.success) expect(r.data).toHaveLength(2);
 	});
 
+	it("insert carries amountMl for a bottle", async () => {
+		const repo = makeMemoryEventRepository({ logger });
+		const r = await repo.insert(
+			newEvent({ type: "bottle", amountMl: 90, rawText: "biberon 90" }),
+		);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data.amountMl).toBe(90);
+	});
+
+	it("listSince treats a bottle as an in-window instant", async () => {
+		const repo = makeMemoryEventRepository({ logger });
+		await repo.insert(
+			newEvent({
+				type: "bottle",
+				amountMl: 100,
+				startedAt: new Date("2026-07-01T10:00:00+02:00"),
+			}),
+		);
+		// out of window → excluded
+		await repo.insert(
+			newEvent({
+				type: "bottle",
+				amountMl: 60,
+				startedAt: new Date("2026-06-30T10:00:00+02:00"),
+			}),
+		);
+		const r = await repo.listSince(
+			1,
+			new Date("2026-07-01T00:00:00+02:00"),
+			new Date("2026-07-02T00:00:00+02:00"),
+		);
+		expect(r.success).toBe(true);
+		if (r.success) {
+			expect(r.data).toHaveLength(1);
+			expect(r.data[0]?.type).toBe("bottle");
+		}
+	});
+
 	it("findLastFeed returns the most recent eat WITH a side", async () => {
 		const repo = makeMemoryEventRepository({ logger });
 		await repo.insert(

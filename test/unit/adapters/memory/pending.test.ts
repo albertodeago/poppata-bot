@@ -54,4 +54,21 @@ describe("[MEMORY pending repo]", () => {
 		expect(r.success).toBe(true);
 		if (r.success) expect(r.data).toBe(1);
 	});
+
+	it("findAmountPending returns the latest amount-kind pending for the chat", async () => {
+		const repo = makeMemoryPendingRepository({ logger });
+		await repo.create({ ...newPending(), kind: "amount" });
+		const r = await repo.findAmountPending(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data?.kind).toBe("amount");
+	});
+
+	it("findAmountPending ignores non-amount pendings and other chats", async () => {
+		const repo = makeMemoryPendingRepository({ logger });
+		await repo.create(newPending()); // no kind
+		await repo.create({ ...newPending(), chatId: 2, kind: "amount" });
+		const r = await repo.findAmountPending(1);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data).toBeNull();
+	});
 });
