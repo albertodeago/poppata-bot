@@ -40,21 +40,46 @@ export default async function handler(
 		new Date(),
 	);
 	if (!valid.success) {
-		// TEMP DEBUG — remove after diagnosing the 401. Logs field NAMES only
-		// (no values), the failing check, freshness, and whether signature is present.
-		const p = new URLSearchParams(initData);
-		console.error(
-			"[stats-debug] initData rejected:",
-			valid.error instanceof Error ? valid.error.message : String(valid.error),
-			"| fields=",
-			[...p.keys()].join(","),
-			"| auth_date=",
-			p.get("auth_date"),
-			"| now=",
-			Math.floor(Date.now() / 1000),
-			"| hasSignature=",
-			p.has("signature"),
-		);
+		// TEMP DEBUG v2 — remove after diagnosing. Prints the real bot (from the
+		// token) vs the configured MINIAPP_URL, and whether a trimmed token would
+		// match (token-whitespace check). No secret is logged.
+		try {
+			const { createHmac } = await import("node:crypto");
+			const p = new URLSearchParams(initData);
+			const provided = p.get("hash") ?? "";
+			p.delete("hash");
+			p.delete("signature");
+			const dcs = [...p.entries()]
+				.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+				.map(([k, v]) => `${k}=${v}`)
+				.join("\n");
+			const tok = env.config.botToken;
+			const h = (t: string) =>
+				createHmac(
+					"sha256",
+					createHmac("sha256", "WebAppData").update(t).digest(),
+				)
+					.update(dcs)
+					.digest("hex");
+			let botUsername = "?";
+			try {
+				botUsername = (await env.telegrafBot.telegram.getMe()).username ?? "?";
+			} catch {}
+			console.error(
+				"[stats-debug2] rawMatch=",
+				h(tok) === provided,
+				"| trimMatch=",
+				h(tok.trim()) === provided,
+				"| tokenHasWhitespace=",
+				tok !== tok.trim(),
+				"| realBotUsername=",
+				botUsername,
+				"| miniAppUrl=",
+				env.config.miniAppUrl,
+			);
+		} catch (e) {
+			console.error("[stats-debug2] error", e);
+		}
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 	const { userId, startParam } = valid.data;
