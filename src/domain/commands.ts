@@ -216,3 +216,18 @@ export const sendWeeklyReport = (
 		previousWeekWindow(romeNow(now)),
 		babyName ? `📅 Settimana scorsa — ${babyName}` : "📅 Settimana scorsa",
 	);
+
+const GRAFICI_TEXT = "📊 Apri le statistiche del bambino";
+const GRAFICI_BUTTON = "📊 Apri statistiche";
+
+/** Reply with a button that opens the stats Mini App for this chat. */
+export const graficiCommand =
+	(chatId: number, miniAppUrl: string) =>
+	async (env: BotEnv): Promise<void> => {
+		await env.bot.sendLinkButton(
+			chatId,
+			GRAFICI_TEXT,
+			GRAFICI_BUTTON,
+			`${miniAppUrl}?startapp=${chatId}`,
+		);
+	};

@@ -72,3 +72,47 @@ export const previousWeekWindow = (now: DateTime): TimeWindow => {
 	const start = now.setZone(ZONE).startOf("week").minus({ weeks: 1 });
 	return { start: start.toJSDate(), end: start.plus({ weeks: 1 }).toJSDate() };
 };
+
+export type Frame = "day" | "week" | "month";
+
+const WEEK_LABELS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+
+/** Sub-windows the Mini App charts plot, in Europe/Rome, deterministic in `now`.
+ *  Buckets may extend past `now` (future buckets simply aggregate to zero). */
+export const bucketWindows = (
+	now: Date,
+	frame: Frame,
+): { start: Date; end: Date; label: string }[] => {
+	const n = romeNow(now);
+	if (frame === "day") {
+		const base = n.startOf("day");
+		return Array.from({ length: 8 }, (_, i) => {
+			const s = base.plus({ hours: i * 3 });
+			return {
+				start: s.toJSDate(),
+				end: s.plus({ hours: 3 }).toJSDate(),
+				label: s.toFormat("HH"),
+			};
+		});
+	}
+	if (frame === "week") {
+		const base = n.startOf("week"); // luxon: Monday
+		return Array.from({ length: 7 }, (_, i) => {
+			const s = base.plus({ days: i });
+			return {
+				start: s.toJSDate(),
+				end: s.plus({ days: 1 }).toJSDate(),
+				label: WEEK_LABELS[i] as string,
+			};
+		});
+	}
+	const base = n.startOf("day").minus({ days: 29 });
+	return Array.from({ length: 30 }, (_, i) => {
+		const s = base.plus({ days: i });
+		return {
+			start: s.toJSDate(),
+			end: s.plus({ days: 1 }).toJSDate(),
+			label: i % 5 === 0 ? s.toFormat("d") : "",
+		};
+	});
+};

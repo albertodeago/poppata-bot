@@ -3,6 +3,7 @@
 	"outputDirectory": "public",
 	"functions": {
 		"api/webhook.ts": { "maxDuration": 10 },
+		"api/stats.ts": { "maxDuration": 10 },
 		"api/setup.ts": { "maxDuration": 30 },
 		"api/cron/report.ts": { "maxDuration": 30 }
 	},

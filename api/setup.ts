@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { makeEnv } from "../src/env.js";
 
-const COMMANDS = [
+export const COMMANDS = [
+	{ command: "grafici", description: "Grafici e statistiche" },
 	{ command: "stato", description: "Sessione in corso" },
 	{ command: "oggi", description: "Statistiche di oggi" },
 	{ command: "ieri", description: "Statistiche di ieri" },

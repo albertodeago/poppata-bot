@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "../../../api/setup.js";
+import handler, { COMMANDS } from "../../../api/setup.js";
 
 const mockRes = () => {
 	const res = { status: vi.fn(), json: vi.fn() };
@@ -8,6 +8,12 @@ const mockRes = () => {
 	res.json.mockReturnValue(res);
 	return res;
 };
+
+describe("[SETUP] command list", () => {
+	it("includes /grafici", () => {
+		expect(COMMANDS.some((c) => c.command === "grafici")).toBe(true);
+	});
+});
 
 describe("[SETUP] auth guard", () => {
 	let prev: string | undefined;

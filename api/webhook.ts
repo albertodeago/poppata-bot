@@ -8,6 +8,7 @@ import {
 } from "../src/domain/bot.js";
 import {
 	annullaCommand,
+	graficiCommand,
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
@@ -63,6 +64,9 @@ const initBot = (): void => {
 	});
 	bot.command("stato", async (ctx) => {
 		await statoCommand(ctx.chat.id, new Date())(env);
+	});
+	bot.command("grafici", async (ctx) => {
+		await graficiCommand(ctx.chat.id, env.config.miniAppUrl)(env);
 	});
 	bot.command("oggi", async (ctx) => {
 		await oggiCommand(ctx.chat.id, new Date())(env);

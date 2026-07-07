@@ -15,6 +15,7 @@ import {
 import type { ChatConfigEnv } from "./domain/chatConfig.js";
 import {
 	annullaCommand,
+	graficiCommand,
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
@@ -38,6 +39,7 @@ const DEV_USER_ID = 1;
 const DEV_MAX_CHATS = 5;
 const DEV_REPO_ISSUES_URL =
 	"https://github.com/albertodeago/poppata-bot/issues";
+const DEV_MINIAPP_URL = "https://t.me/Bot/app";
 
 const logger = makeLogger();
 const { botEnv, state } = makeConsoleBot({ logger });
@@ -115,6 +117,9 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 			return true;
 		case "/report-week":
 			await sendWeeklyReport(DEV_CHAT_ID, now)(env);
+			return true;
+		case "/grafici":
+			await graficiCommand(DEV_CHAT_ID, DEV_MINIAPP_URL)(env);
 			return true;
 		default:
 			return false;

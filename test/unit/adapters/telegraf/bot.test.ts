@@ -11,6 +11,7 @@ const config = {
 	cronSecret: "c",
 	webhookUrl: "w",
 	webhookSecret: "whs",
+	miniAppUrl: "https://t.me/Bot/app",
 	maxChats: 5,
 	repoIssuesUrl: "https://github.com/x/y/issues",
 };

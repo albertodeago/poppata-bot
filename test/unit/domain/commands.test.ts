@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	annullaCommand,
+	graficiCommand,
 	HELP_TEXT,
 	helpCommand,
 	ieriCommand,
@@ -318,6 +319,20 @@ describe("[COMMANDS] /scaletta", () => {
 		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
 			1,
 			"Errore interno, riprova.",
+		);
+	});
+});
+
+describe("[COMMANDS] graficiCommand", () => {
+	it("sends a link button to the Mini App with the chat id in startapp", async () => {
+		const { mocks, env } = makeTestEnv();
+		mocks.bot.sendLinkButton.mockResolvedValue();
+		await graficiCommand(-100999, "https://t.me/Bot/app")(env);
+		expect(mocks.bot.sendLinkButton).toHaveBeenCalledWith(
+			-100999,
+			expect.any(String),
+			expect.any(String),
+			"https://t.me/Bot/app?startapp=-100999",
 		);
 	});
 });

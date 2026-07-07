@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import {
+	bucketWindows,
 	currentDayWindow,
 	formatDuration,
 	hhmm,
@@ -97,5 +98,60 @@ describe("[TIME] romeDay", () => {
 	it("rolls to the next day past Rome midnight", () => {
 		// 23:30 UTC = 01:30 the next day in Rome (summer, +02:00)
 		expect(romeDay(new Date("2026-07-03T23:30:00Z"))).toBe("2026-07-04");
+	});
+});
+
+describe("[TIME] bucketWindows", () => {
+	const now = new Date("2026-07-08T12:00:00+02:00"); // Wed
+
+	it("day → 8 three-hour buckets from Rome midnight", () => {
+		const b = bucketWindows(now, "day");
+		expect(b).toHaveLength(8);
+		expect(b.map((x) => x.label)).toEqual([
+			"00",
+			"03",
+			"06",
+			"09",
+			"12",
+			"15",
+			"18",
+			"21",
+		]);
+		expect(b[0]?.start.toISOString()).toBe(
+			new Date("2026-07-08T00:00:00+02:00").toISOString(),
+		);
+		expect(b[1]?.start.toISOString()).toBe(
+			new Date("2026-07-08T03:00:00+02:00").toISOString(),
+		);
+	});
+
+	it("week → 7 daily buckets from Monday", () => {
+		const b = bucketWindows(now, "week");
+		expect(b).toHaveLength(7);
+		expect(b.map((x) => x.label)).toEqual([
+			"Lun",
+			"Mar",
+			"Mer",
+			"Gio",
+			"Ven",
+			"Sab",
+			"Dom",
+		]);
+		expect(b[0]?.start.toISOString()).toBe(
+			new Date("2026-07-06T00:00:00+02:00").toISOString(),
+		);
+	});
+
+	it("month → 30 daily buckets ending today", () => {
+		const b = bucketWindows(now, "month");
+		expect(b).toHaveLength(30);
+		expect(b[0]?.start.toISOString()).toBe(
+			new Date("2026-06-09T00:00:00+02:00").toISOString(),
+		);
+		expect(b[29]?.start.toISOString()).toBe(
+			new Date("2026-07-08T00:00:00+02:00").toISOString(),
+		);
+		expect(b[0]?.label).toBe("9"); // every 5th bucket labelled
+		expect(b[1]?.label).toBe("");
 	});
 });

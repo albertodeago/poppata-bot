@@ -52,6 +52,12 @@ export interface BotEnv {
 		): Promise<void>;
 		answerCallback(callbackId: string, text?: string): Promise<void>;
 		clearKeyboard(chatId: number, messageId: number): Promise<void>;
+		sendLinkButton(
+			chatId: number,
+			text: string,
+			buttonText: string,
+			url: string,
+		): Promise<void>;
 	};
 }
 

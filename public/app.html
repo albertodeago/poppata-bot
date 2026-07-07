@@ -1,0 +1,416 @@
+
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Baby Stats</title>
+	<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --paper:#fff8ec;
+    --ink:#141210;
+    --ink-soft:#5c574e;        /* AA on paper */
+    --border:#141210;
+    --bw:4px;                  /* chunky border weight */
+    --shadow:6px 6px 0 var(--border);
+
+    /* loud per-topic accents */
+    --eat:#ff5d73;
+    --sleep:#5b8def;
+    --pee:#ffc93c;
+    --poo:#a06a42;
+    --weight:#3ddc97;
+
+    --accent:var(--eat);       /* set by active topic */
+    --font-display:'Arial Black','Helvetica Neue',Impact,system-ui,sans-serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font-body);
+    background:
+      repeating-linear-gradient(45deg, #0000 0 22px, #0000000a 22px 24px),
+      var(--paper);
+    color:var(--ink);
+    display:flex;justify-content:center;
+    padding:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* phone shell */
+  .phone{
+    width:100%;max-width:420px;
+    background:var(--paper);
+    border:var(--bw) solid var(--border);
+    box-shadow:10px 10px 0 var(--border);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+
+  header{
+    background:var(--accent);
+    border-bottom:var(--bw) solid var(--border);
+    padding:16px 18px 14px;
+    transition:background .18s ease;
+  }
+  .kicker{
+    font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    display:inline-block;background:var(--ink);color:var(--paper);
+    padding:3px 8px;border:2px solid var(--ink);
+  }
+  header h1{
+    font-family:var(--font-display);
+    font-size:clamp(34px,11vw,46px);line-height:.92;
+    text-transform:uppercase;letter-spacing:-.02em;
+    margin-top:10px;
+    text-shadow:3px 3px 0 var(--paper);
+  }
+
+  /* hero stat */
+  .hero{
+    padding:18px;
+    border-bottom:var(--bw) solid var(--border);
+    display:flex;align-items:flex-end;gap:12px;justify-content:space-between;
+  }
+  .hero .label{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .hero .sub{font-size:12px;font-weight:600;color:var(--ink-soft);margin-top:4px}
+  .hero .big{
+    font-family:var(--font-display);
+    font-size:clamp(42px,15vw,60px);line-height:.9;letter-spacing:-.03em;
+  }
+  .hero .glyph{font-size:40px;line-height:1;filter:drop-shadow(2px 2px 0 var(--ink))}
+
+  /* topic buttons */
+  .topics{
+    display:grid;grid-template-columns:repeat(5,1fr);
+    gap:0;border-bottom:var(--bw) solid var(--border);
+  }
+  .topic{
+    appearance:none;cursor:pointer;
+    background:var(--paper);border:none;border-right:var(--bw) solid var(--border);
+    padding:12px 4px;min-height:64px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    font-family:var(--font-body);font-weight:800;font-size:11px;text-transform:uppercase;
+    color:var(--ink);letter-spacing:.02em;
+    transition:transform .1s ease, background .15s ease;
+  }
+  .topic:last-child{border-right:none}
+  .topic .e{font-size:22px;line-height:1}
+  .topic:hover{background:#00000008}
+  .topic:active{transform:translateY(2px)}
+  .topic[aria-pressed="true"]{
+    background:var(--tc);
+    box-shadow:inset 0 -5px 0 var(--ink);
+  }
+  .topic:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+
+  /* timeframe segmented */
+  .frame{
+    display:flex;gap:8px;padding:14px 16px 10px;align-items:center;justify-content:space-between;
+  }
+  .frame .title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)}
+  .seg{display:flex;border:3px solid var(--border);background:var(--paper)}
+  .seg button{
+    appearance:none;cursor:pointer;background:var(--paper);border:none;
+    border-right:3px solid var(--border);
+    font-family:var(--font-body);font-weight:800;font-size:12px;text-transform:uppercase;
+    padding:7px 11px;color:var(--ink);min-height:36px;
+  }
+  .seg button:last-child{border-right:none}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .seg button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  /* chart */
+  .chartwrap{
+    margin:4px 16px 0;
+    border:var(--bw) solid var(--border);
+    background:#fff;
+    box-shadow:var(--shadow);
+    padding:12px 10px 8px;
+  }
+  canvas{display:block;width:100%;height:200px;image-rendering:auto}
+  .axis{
+    display:flex;justify-content:space-between;
+    font-size:10px;font-weight:700;color:var(--ink-soft);
+    padding:6px 2px 0;text-transform:uppercase;letter-spacing:.04em;
+  }
+
+  /* summary blocks */
+  .stats{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;
+  }
+  .stat{
+    border:var(--bw) solid var(--border);padding:12px;
+    box-shadow:4px 4px 0 var(--border);
+  }
+  .stat:nth-child(1){background:var(--accent)}
+  .stat .n{font-family:var(--font-display);font-size:30px;line-height:1;letter-spacing:-.02em}
+  .stat .k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+  .stat .k small{display:block;font-weight:600;color:var(--ink-soft);margin-top:2px;letter-spacing:0;text-transform:none;font-size:11px}
+
+  footer{
+    padding:12px 16px 16px;border-top:var(--bw) solid var(--border);
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.04em;
+  }
+  .dot{width:10px;height:10px;background:var(--weight);border:2px solid var(--ink);display:inline-block;margin-right:5px;vertical-align:middle}
+  .live{display:flex;align-items:center}
+</style>
+</head>
+<body>
+  <main class="phone" data-od-id="tracker-shell">
+    <header data-od-id="tracker-header">
+      <span class="kicker">Statistiche</span>
+      <h1 id="topicTitle">Poppate</h1>
+    </header>
+
+    <section class="hero" data-od-id="hero-stat" aria-live="polite">
+      <div>
+        <div class="label" id="heroLabel">Poppate oggi</div>
+        <div class="big" id="heroValue">7</div>
+        <div class="sub" id="heroSub">seno + biberon</div>
+      </div>
+      <div class="glyph" id="heroGlyph" aria-hidden="true">🍼</div>
+    </section>
+
+    <div id="openNote" style="display:none;padding:8px 18px;border-bottom:var(--bw) solid var(--border);font-size:12px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em"></div>
+
+    <div class="topics" role="group" aria-label="Pick a topic to graph" data-od-id="topic-buttons">
+      <button class="topic" data-topic="eat"    aria-pressed="true"  data-od-id="topic-eat"><span class="e" aria-hidden="true">🍼</span>Poppate</button>
+      <button class="topic" data-topic="sleep"  aria-pressed="false" data-od-id="topic-sleep"><span class="e" aria-hidden="true">😴</span>Nanna</button>
+      <button class="topic" data-topic="pee"    aria-pressed="false" data-od-id="topic-pee"><span class="e" aria-hidden="true">💦</span>Pipì</button>
+      <button class="topic" data-topic="poo"    aria-pressed="false" data-od-id="topic-poo"><span class="e" aria-hidden="true">💩</span>Cacca</button>
+      <button class="topic" data-topic="weight" aria-pressed="false" data-od-id="topic-weight"><span class="e" aria-hidden="true">⚖️</span>Peso</button>
+    </div>
+
+    <div class="frame" data-od-id="timeframe">
+      <span class="title">Periodo</span>
+      <div class="seg" role="group" aria-label="Time window">
+        <button data-frame="day"   aria-pressed="true"  data-od-id="frame-day">Giorno</button>
+        <button data-frame="week"  aria-pressed="false" data-od-id="frame-week">Settimana</button>
+        <button data-frame="month" aria-pressed="false" data-od-id="frame-month">Mese</button>
+      </div>
+    </div>
+
+    <div class="chartwrap" data-od-id="chart">
+      <canvas id="chart" role="img" aria-label="Chart of selected topic over time"></canvas>
+      <div class="axis" id="axis"></div>
+    </div>
+
+    <section class="stats" data-od-id="summary-stats">
+      <div class="stat" data-od-id="stat-total"><div class="n" id="statTotal">—</div><div class="k" id="statTotalK">—<small>—</small></div></div>
+      <div class="stat" data-od-id="stat-avg"><div class="n" id="statAvg">—</div><div class="k" id="statAvgK">—<small>—</small></div></div>
+    </section>
+
+    <footer data-od-id="tracker-footer">
+      <span class="live"><span class="dot"></span>Dati live</span>
+      <span id="babyName">Baby “Mochi” · 4 mo</span>
+    </footer>
+  </main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const getVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const TOPICS = {
+    eat:    { title: "Poppate", glyph: "🍼", varName: "--eat" },
+    sleep:  { title: "Nanna",   glyph: "😴", varName: "--sleep" },
+    pee:    { title: "Pipì",    glyph: "💦", varName: "--pee" },
+    poo:    { title: "Cacca",   glyph: "💩", varName: "--poo" },
+    weight: { title: "Peso",    glyph: "⚖️", varName: "--weight" },
+  };
+  const FRAME_LABEL = { day: "Oggi", week: "Questa settimana", month: "Questo mese" };
+  const RANGE_DAYS = { day: 7, week: 7, month: 30 };
+
+  const hrs = (ms) => +(ms / 3_600_000).toFixed(1);
+  const fmtDur = (ms) => {
+    const m = Math.round(ms / 60_000);
+    const h = Math.floor(m / 60), r = m % 60;
+    return h > 0 ? (r > 0 ? h + "h " + r + "m" : h + "h") : m + "m";
+  };
+  const fmtDay = (ymd) => { const [, mo, da] = ymd.split("-"); return Number(da) + "/" + Number(mo); };
+
+  const cvs = $("chart"), ctx = cvs.getContext("2d");
+  let P = null, topic = "eat", frame = "day";
+
+  function fatal(msg) {
+    document.body.innerHTML =
+      '<main class="phone" style="padding:24px"><h1 style="font-family:var(--font-display);text-transform:uppercase">Ops</h1><p style="margin-top:12px;font-weight:600">' +
+      msg + "</p></main>";
+  }
+
+  async function load() {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg || !tg.initData) { fatal("Apri questa pagina dal bot su Telegram."); return; }
+    tg.ready(); tg.expand();
+    let res;
+    try {
+      res = await fetch("/api/stats", { headers: { "X-Telegram-Init-Data": tg.initData } });
+    } catch (_e) { fatal("Errore di rete. Riprova."); return; }
+    if (res.status === 401) { fatal("Sessione non valida. Riapri dal bot."); return; }
+    if (res.status === 403) { fatal("Non sei autorizzato a vedere queste statistiche."); return; }
+    if (!res.ok) { fatal("Errore del server. Riprova più tardi."); return; }
+    P = await res.json();
+    $("babyName").textContent = P.babyName ? "👶 " + P.babyName : "";
+    const openEl = document.getElementById("openNote");
+    if (P.openSession) {
+      const which = P.openSession === "eat" ? "poppata" : "nanna";
+      openEl.textContent = "⏳ " + which + " in corso — non conteggiata";
+      openEl.style.display = "block";
+    }
+    restore();
+    setTopic(topic);
+    setFrame(frame);
+  }
+
+  // { values, labels, line, decimal, color }
+  function series() {
+    const color = getVar(TOPICS[topic].varName);
+    if (topic === "weight") {
+      const cutoff = Date.parse(P.generatedAt) - RANGE_DAYS[frame] * 86_400_000;
+      const pts = P.weight.filter((p) => Date.parse(p.day + "T00:00:00Z") >= cutoff);
+      return { values: pts.map((p) => p.kg), labels: pts.map((p) => fmtDay(p.day)), line: true, decimal: true, color };
+    }
+    const fs = P[frame], t = fs[topic];
+    const values = topic === "sleep" ? t.buckets.map(hrs) : t.buckets;
+    return { values, labels: fs.labels, line: false, decimal: topic === "sleep", color };
+  }
+
+  function setHeroAndCards() {
+    if (topic === "weight") {
+      const cutoff = Date.parse(P.generatedAt) - RANGE_DAYS[frame] * 86_400_000;
+      const pts = P.weight.filter((p) => Date.parse(p.day + "T00:00:00Z") >= cutoff);
+      const latest = pts.length ? pts[pts.length - 1].kg : null;
+      const delta = pts.length >= 2 ? +(pts[pts.length - 1].kg - pts[0].kg).toFixed(2) : 0;
+      $("heroLabel").textContent = "Peso";
+      $("heroValue").textContent = latest === null ? "—" : latest;
+      $("heroSub").textContent = "kg · ultimo";
+      $("statTotal").textContent = latest === null ? "—" : latest + "kg";
+      $("statTotalK").innerHTML = "Ultimo<small>peso</small>";
+      $("statAvg").textContent = (delta >= 0 ? "+" : "") + delta + "kg";
+      $("statAvgK").innerHTML = "Variazione<small>sul periodo</small>";
+      return;
+    }
+    const t = P[frame][topic];
+    if (topic === "eat") {
+      $("heroLabel").textContent = FRAME_LABEL[frame] + " · poppate";
+      $("heroValue").textContent = t.total;
+      $("heroSub").textContent = t.feedSx + " sx · " + t.feedDx + " dx";
+      $("statTotal").textContent = t.bottleMl + "ml";
+      $("statTotalK").innerHTML = "Biberon<small>" + t.bottleCount + " biberon</small>";
+      $("statAvg").textContent = fmtDur(t.avgFeedMs);
+      $("statAvgK").innerHTML = "Media<small>per poppata</small>";
+    } else if (topic === "sleep") {
+      $("heroLabel").textContent = FRAME_LABEL[frame] + " · sonno";
+      $("heroValue").textContent = hrs(t.total) + "h";
+      $("heroSub").textContent = "totale";
+      $("statTotal").textContent = hrs(t.longestSleepMs) + "h";
+      $("statTotalK").innerHTML = "Più lunga<small>nel periodo</small>";
+      $("statAvg").textContent = hrs(t.avgPerDay) + "h";
+      $("statAvgK").innerHTML = "Media<small>al giorno</small>";
+    } else {
+      $("heroLabel").textContent = FRAME_LABEL[frame] + " · " + TOPICS[topic].title.toLowerCase();
+      $("heroValue").textContent = t.total;
+      $("heroSub").textContent = "totale";
+      $("statTotal").textContent = t.total;
+      $("statTotalK").innerHTML = "Totale<small>nel periodo</small>";
+      $("statAvg").textContent = t.avgPerDay;
+      $("statAvgK").innerHTML = "Media<small>al giorno</small>";
+    }
+  }
+
+  function render() {
+    if (!P) return;
+    const s = series();
+    setHeroAndCards();
+    drawChart(s.values, s.labels, s);
+    cvs.setAttribute("aria-label", TOPICS[topic].title + ": " + s.values.join(", "));
+  }
+
+  function setTopic(t) {
+    topic = t;
+    document.querySelectorAll(".topic").forEach((b) => b.setAttribute("aria-pressed", b.dataset.topic === t));
+    const accent = getVar(TOPICS[t].varName);
+    document.documentElement.style.setProperty("--accent", accent);
+    document.querySelectorAll(".topic").forEach((b) => b.style.removeProperty("--tc"));
+    const active = document.querySelector('.topic[data-topic="' + t + '"]');
+    if (active) active.style.setProperty("--tc", accent);
+    $("topicTitle").textContent = TOPICS[t].title;
+    $("heroGlyph").textContent = TOPICS[t].glyph;
+    persist();
+    render();
+  }
+  function setFrame(f) {
+    frame = f;
+    document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.frame === f));
+    persist();
+    render();
+  }
+
+  function drawChart(arr, labs, d) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cvs.clientWidth, h = 200;
+    cvs.width = w * dpr; cvs.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const pad = { l: 6, r: 6, t: 14, b: 6 };
+    const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+    const n = arr.length;
+    const ax = $("axis"); ax.innerHTML = "";
+    if (n === 0) { return; }
+    const max = Math.max(...arr) * 1.15 || 1;
+    const min = d.line ? Math.min(...arr) * 0.985 : 0;
+    const span = (max - min) || 1;
+
+    if (d.line) {
+      ctx.strokeStyle = "#e7e2d6"; ctx.lineWidth = 1;
+      for (let g = 0; g <= 3; g++) { const y = pad.t + ih * (g / 3); ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); }
+      const pts = arr.map((v, i) => [pad.l + iw * (n === 1 ? 0.5 : i / (n - 1)), pad.t + ih * (1 - (v - min) / span)]);
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach((p) => ctx.lineTo(p[0], p[1]));
+      ctx.lineTo(pts[n - 1][0], pad.t + ih); ctx.lineTo(pts[0][0], pad.t + ih); ctx.closePath();
+      ctx.fillStyle = hexA(d.color, 0.22); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach((p) => ctx.lineTo(p[0], p[1]));
+      ctx.strokeStyle = d.color; ctx.lineWidth = 4; ctx.lineJoin = "round"; ctx.stroke();
+      pts.forEach((p) => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, 7); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = "#141210"; ctx.stroke(); });
+    } else {
+      const gap = 8, bw = (iw - gap * (n - 1)) / n;
+      arr.forEach((v, i) => {
+        const bh = ih * (v / max);
+        const x = pad.l + i * (bw + gap), y = pad.t + ih - bh;
+        ctx.fillStyle = "#141210"; ctx.fillRect(x + 3, y + 3, bw, bh);
+        ctx.fillStyle = d.color; ctx.fillRect(x, y, bw, bh);
+        ctx.strokeStyle = "#141210"; ctx.lineWidth = 3; ctx.strokeRect(x, y, bw, bh);
+        if (v > 0 && bw > 16) { ctx.fillStyle = "#141210"; ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.fillText(String(v), x + bw / 2, y - 4); }
+      });
+    }
+    labs.forEach((l) => { const sp = document.createElement("span"); sp.textContent = l; ax.appendChild(sp); });
+  }
+  function hexA(hex, a) {
+    const hx = hex.replace("#", "");
+    const r = parseInt(hx.substr(0, 2), 16), g = parseInt(hx.substr(2, 2), 16), b = parseInt(hx.substr(4, 2), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  }
+
+  function persist() {
+    try { localStorage.setItem("babystats", JSON.stringify({ topic, frame })); } catch (_e) {}
+  }
+  function restore() {
+    try {
+      const s = JSON.parse(localStorage.getItem("babystats") || "{}");
+      if (s.topic && TOPICS[s.topic]) topic = s.topic;
+      if (["day", "week", "month"].includes(s.frame)) frame = s.frame;
+    } catch (_e) {}
+  }
+
+  document.querySelectorAll(".topic").forEach((b) => b.addEventListener("click", () => setTopic(b.dataset.topic)));
+  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setFrame(b.dataset.frame)));
+  window.addEventListener("resize", render);
+
+  load();
+})();
+</script>
+</body>
+</html>
+</artifact

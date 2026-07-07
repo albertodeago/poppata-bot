@@ -48,6 +48,7 @@ export const makeTestEnv = () => {
 			sendFeedTypePrompt: vi.fn<BotEnv["bot"]["sendFeedTypePrompt"]>(),
 			answerCallback: vi.fn<BotEnv["bot"]["answerCallback"]>(),
 			clearKeyboard: vi.fn<BotEnv["bot"]["clearKeyboard"]>(),
+			sendLinkButton: vi.fn<BotEnv["bot"]["sendLinkButton"]>(),
 		},
 		logger: {
 			info: vi.fn<LoggerEnv["logger"]["info"]>(),

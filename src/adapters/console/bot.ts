@@ -58,6 +58,9 @@ export const makeConsoleBot = (
 			clearKeyboard: async (_chatId, messageId) => {
 				console.log(`   (tastiera rimossa da msg ${messageId})`);
 			},
+			sendLinkButton: async (chatId, text, buttonText, url) => {
+				console.log(`\n💬 [${chatId}] ${text}\n   [${buttonText}] → ${url}`);
+			},
 		},
 	};
 

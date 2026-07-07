@@ -123,6 +123,11 @@ export const makeTelegrafAdapter =
 						throw e;
 					}
 				},
+				sendLinkButton: async (chatId, text, buttonText, url) => {
+					await bot.telegram.sendMessage(chatId, text, {
+						reply_markup: { inline_keyboard: [[{ text: buttonText, url }]] },
+					});
+				},
 			},
 		};
 

@@ -8,6 +8,7 @@ const FULL_ENV = {
 	CRON_SECRET: "cs",
 	WEBHOOK_URL: "https://ex.com",
 	WEBHOOK_SECRET: "whs",
+	MINIAPP_URL: "https://t.me/Bot/app",
 };
 
 describe("[CONFIG] getConfig", () => {
@@ -22,6 +23,7 @@ describe("[CONFIG] getConfig", () => {
 			"CRON_SECRET",
 			"WEBHOOK_URL",
 			"WEBHOOK_SECRET",
+			"MINIAPP_URL",
 			"MAX_CHATS",
 			"REPO_ISSUES_URL",
 		]) {
@@ -38,6 +40,7 @@ describe("[CONFIG] getConfig", () => {
 		expect(c.botToken).toBe("tok");
 		expect(c.geminiModel).toBe("gemini-2.0-flash"); // default
 		expect(c.webhookSecret).toBe("whs");
+		expect(c.miniAppUrl).toBe("https://t.me/Bot/app");
 	});
 
 	it("uses GEMINI_MODEL override when set", () => {
@@ -49,6 +52,12 @@ describe("[CONFIG] getConfig", () => {
 		Object.assign(process.env, FULL_ENV);
 		delete process.env.BOT_TOKEN;
 		expect(() => getConfig()).toThrow(/BOT_TOKEN/);
+	});
+
+	it("throws when MINIAPP_URL is missing", () => {
+		Object.assign(process.env, FULL_ENV);
+		delete process.env.MINIAPP_URL;
+		expect(() => getConfig()).toThrow(/MINIAPP_URL/);
 	});
 
 	it("defaults maxChats to 5 and repoIssuesUrl to the repo issues URL", () => {

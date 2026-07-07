@@ -6,6 +6,8 @@ export type Config = {
 	cronSecret: string;
 	webhookUrl: string;
 	webhookSecret: string;
+	/** t.me deep-link base for the stats Mini App, e.g. https://t.me/Bot/app */
+	miniAppUrl: string;
 	/** Max number of chats that may self-register (MAX_CHATS, default 5). */
 	maxChats: number;
 	/** Base repo issues URL for the "bot full" request-access link. */
@@ -41,6 +43,7 @@ export const getConfig = (): Config => {
 		cronSecret: required("CRON_SECRET"),
 		webhookUrl: required("WEBHOOK_URL"),
 		webhookSecret: required("WEBHOOK_SECRET"),
+		miniAppUrl: required("MINIAPP_URL"),
 		maxChats,
 		repoIssuesUrl: process.env.REPO_ISSUES_URL ?? DEFAULT_REPO_ISSUES_URL,
 	};

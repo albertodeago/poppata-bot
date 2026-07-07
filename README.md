@@ -20,7 +20,7 @@ bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHA
 
 ## Roadmap
 
-- [ ] mini app telegram that shows graphs / stats
+- [x] mini app telegram that shows graphs / stats
 - [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
 
 ## What it understands
@@ -63,6 +63,7 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 | `/annulla` | remove the most recently saved event |
 | `/seno` | show the latest recorded breast side |
 | `/peso [grammi]` | show weight history, or record/update today's weight |
+| `/grafici` | apri la mini app con grafici e statistiche |
 | `/help` | show the in-chat help |
 
 The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
@@ -85,6 +86,20 @@ can enable it manually with `npm run enable-chat -- <chatId> [nome]`.
 ### Reports
 
 A cron posts **yesterday's** stats daily at `0 7 * * *` UTC (≈09:00 Rome in summer, 08:00 in winter — accepted drift). On **Mondays** it also posts the previous ISO week (Mon–Sun). Stale confirmation prompts (>24h) are swept in the same job.
+
+### Stats Mini App
+
+`/grafici` posts a button that opens a **Telegram Mini App** (`public/app.html`,
+served by Vercel) with playful charts of feeds, sleep, pee, poop and weight over
+**Giorno / Settimana / Mese**. It reads `GET /api/stats`, which validates the
+Telegram `initData` HMAC (`BOT_TOKEN`) and checks group membership via
+`getChatMember` before returning anything — the Postgres connection is never
+exposed to the browser.
+
+**One-time setup:** register a direct-link Mini App with BotFather (`/newapp` →
+pick the bot → short name, e.g. `stats` → Web App URL
+`https://<deployment>/app.html`), set `MINIAPP_URL=https://t.me/<botusername>/<shortname>`
+in the environment, then re-run `/api/setup`.
 
 ---
 
