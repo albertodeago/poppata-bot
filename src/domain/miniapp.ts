@@ -10,10 +10,11 @@ export interface ValidatedInitData {
 /**
  * Validate a Telegram Mini App `initData` string:
  *   secret = HMAC_SHA256("WebAppData", botToken)
- *   check  = sorted "k=v" of every field except `hash`/`signature`, joined by "\n"
+ *   check  = sorted "k=v" of every field except `hash`, joined by "\n"
  *   valid iff hex(HMAC_SHA256(check, secret)) === hash  AND  auth_date is fresh.
- * `hash` (bot-token HMAC) and `signature` (third-party Ed25519) are both excluded
- * from the check string; only `hash` is verified here.
+ * Only `hash` is excluded from the check string. `signature` (the Ed25519
+ * third-party field) IS included — Telegram computes `hash` over every other
+ * field, signature among them; excluding it makes real payloads fail to validate.
  */
 export const validateInitData = (
 	raw: string,
@@ -25,7 +26,6 @@ export const validateInitData = (
 	const hash = params.get("hash");
 	if (!hash) return error(new Error("initData: missing hash"));
 	params.delete("hash");
-	params.delete("signature");
 
 	const dataCheck = [...params.entries()]
 		.sort((a, b) => a[0].localeCompare(b[0]))

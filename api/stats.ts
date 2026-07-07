@@ -20,11 +20,6 @@ export default async function handler(
 	const rawHeader = req.headers["x-telegram-init-data"];
 	const initData = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
 	if (!initData) {
-		// TEMP DEBUG — remove after diagnosing the 401
-		console.error(
-			"[stats-debug] missing x-telegram-init-data header; header keys=",
-			Object.keys(req.headers).join(","),
-		);
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 
@@ -40,46 +35,6 @@ export default async function handler(
 		new Date(),
 	);
 	if (!valid.success) {
-		// TEMP DEBUG v2 — remove after diagnosing. Prints the real bot (from the
-		// token) vs the configured MINIAPP_URL, and whether a trimmed token would
-		// match (token-whitespace check). No secret is logged.
-		try {
-			const { createHmac } = await import("node:crypto");
-			const p = new URLSearchParams(initData);
-			const provided = p.get("hash") ?? "";
-			p.delete("hash");
-			p.delete("signature");
-			const dcs = [...p.entries()]
-				.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-				.map(([k, v]) => `${k}=${v}`)
-				.join("\n");
-			const tok = env.config.botToken;
-			const h = (t: string) =>
-				createHmac(
-					"sha256",
-					createHmac("sha256", "WebAppData").update(t).digest(),
-				)
-					.update(dcs)
-					.digest("hex");
-			let botUsername = "?";
-			try {
-				botUsername = (await env.telegrafBot.telegram.getMe()).username ?? "?";
-			} catch {}
-			console.error(
-				"[stats-debug2] rawMatch=",
-				h(tok) === provided,
-				"| trimMatch=",
-				h(tok.trim()) === provided,
-				"| tokenHasWhitespace=",
-				tok !== tok.trim(),
-				"| realBotUsername=",
-				botUsername,
-				"| miniAppUrl=",
-				env.config.miniAppUrl,
-			);
-		} catch (e) {
-			console.error("[stats-debug2] error", e);
-		}
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 	const { userId, startParam } = valid.data;

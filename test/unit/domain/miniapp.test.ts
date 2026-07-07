@@ -41,6 +41,23 @@ describe("[MINIAPP] validateInitData", () => {
 		}
 	});
 
+	it("includes signature in the hash (real initData carries a signature field)", () => {
+		// Telegram computes `hash` over every field except `hash` itself — which
+		// INCLUDES `signature`. Only the Ed25519 third-party check excludes signature.
+		const raw = sign(
+			{
+				user: JSON.stringify({ id: 42 }),
+				auth_date: authDate,
+				start_param: "-100999",
+				signature: "ZWQyNTUxOXNpZ25hdHVyZQ",
+			},
+			TOKEN,
+		);
+		const res = validateInitData(raw, TOKEN, 86400, NOW);
+		expect(res.success).toBe(true);
+		if (res.success) expect(res.data.startParam).toBe("-100999");
+	});
+
 	it("rejects a tampered field", () => {
 		const raw = sign(
 			{ user: JSON.stringify({ id: 42 }), auth_date: authDate },
