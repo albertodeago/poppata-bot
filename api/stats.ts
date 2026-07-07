@@ -20,6 +20,11 @@ export default async function handler(
 	const rawHeader = req.headers["x-telegram-init-data"];
 	const initData = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
 	if (!initData) {
+		// TEMP DEBUG — remove after diagnosing the 401
+		console.error(
+			"[stats-debug] missing x-telegram-init-data header; header keys=",
+			Object.keys(req.headers).join(","),
+		);
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 
@@ -35,6 +40,21 @@ export default async function handler(
 		new Date(),
 	);
 	if (!valid.success) {
+		// TEMP DEBUG — remove after diagnosing the 401. Logs field NAMES only
+		// (no values), the failing check, freshness, and whether signature is present.
+		const p = new URLSearchParams(initData);
+		console.error(
+			"[stats-debug] initData rejected:",
+			valid.error instanceof Error ? valid.error.message : String(valid.error),
+			"| fields=",
+			[...p.keys()].join(","),
+			"| auth_date=",
+			p.get("auth_date"),
+			"| now=",
+			Math.floor(Date.now() / 1000),
+			"| hasSignature=",
+			p.has("signature"),
+		);
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 	const { userId, startParam } = valid.data;
