@@ -45,6 +45,7 @@ export const HELP_TEXT = [
 	"/peso 3400 — registra il peso; /peso mostra lo storico",
 	"/nome Mario — imposta il nome del bimbo/a",
 	"/report on|off — attiva/disattiva i report automatici",
+	"/guida — guida visuale al bot",
 	"/help — questo messaggio",
 ].join("\n");
 
@@ -231,4 +232,14 @@ export const graficiCommand =
 			GRAFICI_BUTTON,
 			`${miniAppUrl}?startapp=${chatId}`,
 		);
+	};
+
+const GUIDA_TEXT = "📖 Guida visuale: come usare il bot";
+const GUIDA_BUTTON = "📖 Apri la guida";
+
+/** Reply with a button that opens the visual onboarding guide. */
+export const guidaCommand =
+	(chatId: number, guideUrl: string) =>
+	async (env: BotEnv): Promise<void> => {
+		await env.bot.sendLinkButton(chatId, GUIDA_TEXT, GUIDA_BUTTON, guideUrl);
 	};

@@ -48,6 +48,13 @@ describe("[CONFIG] getConfig", () => {
 		expect(getConfig().geminiModel).toBe("gemini-x");
 	});
 
+	it("derives guideUrl from WEBHOOK_URL, stripping a trailing slash", () => {
+		Object.assign(process.env, FULL_ENV);
+		expect(getConfig().guideUrl).toBe("https://ex.com/guida.html");
+		Object.assign(process.env, FULL_ENV, { WEBHOOK_URL: "https://ex.com/" });
+		expect(getConfig().guideUrl).toBe("https://ex.com/guida.html");
+	});
+
 	it("throws when a required var is missing", () => {
 		Object.assign(process.env, FULL_ENV);
 		delete process.env.BOT_TOKEN;

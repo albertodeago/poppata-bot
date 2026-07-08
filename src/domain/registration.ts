@@ -35,13 +35,17 @@ export const describeIssueLink = (
 const nameSet = (name: string, updated: boolean): string =>
 	`👶 Nome ${updated ? "aggiornato" : "impostato"}: ${name}`;
 
-const welcomeMessage = (babyName?: string): string => {
+const welcomeMessage = (guideUrl: string, babyName?: string): string => {
 	const nameLine = babyName ? `👶 Nome: ${babyName}` : NAME_HINT;
-	return `${WELCOME}\n${nameLine}\n\n${HELP_TEXT}`;
+	return `${WELCOME}\n${nameLine}\n\n${HELP_TEXT}\n\n📖 <a href="${guideUrl}">Guida visuale: come usare il bot</a>`;
 };
 
-const registerFull = (maxChats: number, url: string): string =>
-	`Mi dispiace, il bot ha raggiunto il numero massimo di chat (${maxChats}). Richiedi l'attivazione qui: ${url}`;
+const registerFull = (
+	maxChats: number,
+	url: string,
+	guideUrl: string,
+): string =>
+	`Mi dispiace, il bot ha raggiunto il numero massimo di chat (${maxChats}). Richiedi l'attivazione qui: ${url}\n\n📖 Nel frattempo, guarda come funziona: ${guideUrl}`;
 
 export interface RegisterInput {
 	chatId: number;
@@ -51,14 +55,22 @@ export interface RegisterInput {
 	name?: string;
 	maxChats: number;
 	repoIssuesUrl: string;
+	guideUrl: string;
 }
 
 /** Shared by `/start` and the `my_chat_member` add-event. Idempotent. */
 export const registerChat =
 	(input: RegisterInput) =>
 	async (env: RegEnv): Promise<void> => {
-		const { chatId, userName, chatTitle, name, maxChats, repoIssuesUrl } =
-			input;
+		const {
+			chatId,
+			userName,
+			chatTitle,
+			name,
+			maxChats,
+			repoIssuesUrl,
+			guideUrl,
+		} = input;
 
 		const existingRes = await env.chatConfigRepository.get(chatId);
 		if (!existingRes.success) {
@@ -82,9 +94,11 @@ export const registerChat =
 				);
 				return;
 			}
-			await env.bot.sendMessage(chatId, welcomeMessage(existing.babyName), {
-				parseMode: "HTML",
-			});
+			await env.bot.sendMessage(
+				chatId,
+				welcomeMessage(guideUrl, existing.babyName),
+				{ parseMode: "HTML" },
+			);
 			return;
 		}
 
@@ -101,6 +115,7 @@ export const registerChat =
 				registerFull(
 					maxChats,
 					describeIssueLink(repoIssuesUrl, chatId, chatTitle),
+					guideUrl,
 				),
 			);
 			return;
@@ -123,7 +138,7 @@ export const registerChat =
 				return;
 			}
 		}
-		await env.bot.sendMessage(chatId, welcomeMessage(name), {
+		await env.bot.sendMessage(chatId, welcomeMessage(guideUrl, name), {
 			parseMode: "HTML",
 		});
 	};

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	annullaCommand,
 	graficiCommand,
+	guidaCommand,
 	HELP_TEXT,
 	helpCommand,
 	ieriCommand,
@@ -340,5 +341,23 @@ describe("[COMMANDS] graficiCommand", () => {
 describe("[COMMANDS] /report", () => {
 	it("HELP_TEXT documents the /report command", () => {
 		expect(HELP_TEXT).toContain("/report on|off");
+	});
+});
+
+describe("[COMMANDS] guidaCommand", () => {
+	it("sends a link button to the visual guide page", async () => {
+		const { mocks, env } = makeTestEnv();
+		mocks.bot.sendLinkButton.mockResolvedValue();
+		await guidaCommand(-100999, "https://ex.com/guida.html")(env);
+		expect(mocks.bot.sendLinkButton).toHaveBeenCalledWith(
+			-100999,
+			expect.any(String),
+			expect.any(String),
+			"https://ex.com/guida.html",
+		);
+	});
+
+	it("HELP_TEXT documents the /guida command", () => {
+		expect(HELP_TEXT).toContain("/guida");
 	});
 });

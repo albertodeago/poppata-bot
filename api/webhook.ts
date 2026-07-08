@@ -9,6 +9,7 @@ import {
 import {
 	annullaCommand,
 	graficiCommand,
+	guidaCommand,
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
@@ -47,6 +48,7 @@ const registerFrom = (
 		...(name ? { name } : {}),
 		maxChats: env.config.maxChats,
 		repoIssuesUrl: env.config.repoIssuesUrl,
+		guideUrl: env.config.guideUrl,
 	})(env);
 };
 
@@ -75,6 +77,9 @@ const initBot = (): void => {
 	});
 	bot.command("grafici", async (ctx) => {
 		await graficiCommand(ctx.chat.id, env.config.miniAppUrl)(env);
+	});
+	bot.command("guida", async (ctx) => {
+		await guidaCommand(ctx.chat.id, env.config.guideUrl)(env);
 	});
 	bot.command("oggi", async (ctx) => {
 		await oggiCommand(ctx.chat.id, new Date())(env);

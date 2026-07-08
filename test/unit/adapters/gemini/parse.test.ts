@@ -11,6 +11,7 @@ const env = {
 		webhookUrl: "w",
 		webhookSecret: "whs",
 		miniAppUrl: "https://t.me/Bot/app",
+		guideUrl: "https://ex.com/guida.html",
 		maxChats: 5,
 		repoIssuesUrl: "https://github.com/x/y/issues",
 	},

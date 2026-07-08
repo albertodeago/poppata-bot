@@ -16,6 +16,7 @@ import type { ChatConfigEnv } from "./domain/chatConfig.js";
 import {
 	annullaCommand,
 	graficiCommand,
+	guidaCommand,
 	helpCommand,
 	ieriCommand,
 	oggiCommand,
@@ -40,6 +41,7 @@ const DEV_MAX_CHATS = 5;
 const DEV_REPO_ISSUES_URL =
 	"https://github.com/albertodeago/poppata-bot/issues";
 const DEV_MINIAPP_URL = "https://t.me/Bot/app";
+const DEV_GUIDE_URL = "http://localhost:3000/guida.html";
 
 const logger = makeLogger();
 const { botEnv, state } = makeConsoleBot({ logger });
@@ -121,6 +123,9 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 		case "/grafici":
 			await graficiCommand(DEV_CHAT_ID, DEV_MINIAPP_URL)(env);
 			return true;
+		case "/guida":
+			await guidaCommand(DEV_CHAT_ID, DEV_GUIDE_URL)(env);
+			return true;
 		default:
 			return false;
 	}
@@ -165,6 +170,7 @@ const handleLine = async (line: string): Promise<void> => {
 			...(name ? { name } : {}),
 			maxChats: DEV_MAX_CHATS,
 			repoIssuesUrl: DEV_REPO_ISSUES_URL,
+			guideUrl: DEV_GUIDE_URL,
 		})(env);
 		return;
 	}

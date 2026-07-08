@@ -13,6 +13,7 @@ const base = {
 	userName: "papà",
 	maxChats: 5,
 	repoIssuesUrl: "https://github.com/x/y/issues",
+	guideUrl: "https://ex.com/guida.html",
 };
 
 const lastMessage = (
@@ -36,6 +37,7 @@ describe("[REGISTRATION] registerChat", () => {
 			createdByName: "papà",
 		});
 		expect(lastMessage(mocks).toLowerCase()).toContain("attivato");
+		expect(lastMessage(mocks)).toContain("https://ex.com/guida.html");
 	});
 
 	it("registers a fresh chat with an inline name", async () => {
@@ -91,6 +93,7 @@ describe("[REGISTRATION] registerChat", () => {
 		const msg = lastMessage(mocks);
 		expect(msg).toContain("https://github.com/x/y/issues/new");
 		expect(msg).toContain("-100999");
+		expect(msg).toContain("https://ex.com/guida.html");
 	});
 });
 

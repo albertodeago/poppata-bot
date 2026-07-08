@@ -14,6 +14,10 @@ describe("[SETUP] command list", () => {
 		expect(COMMANDS.some((c) => c.command === "grafici")).toBe(true);
 	});
 
+	it("includes /guida", () => {
+		expect(COMMANDS.some((c) => c.command === "guida")).toBe(true);
+	});
+
 	it("COMMANDS includes the report toggle", () => {
 		expect(COMMANDS.some((c) => c.command === "report")).toBe(true);
 	});

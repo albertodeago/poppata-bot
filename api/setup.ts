@@ -13,6 +13,7 @@ export const COMMANDS = [
 	{ command: "peso", description: "Peso: registra o mostra lo storico" },
 	{ command: "nome", description: "Imposta il nome del bimbo/a" },
 	{ command: "report", description: "Report automatici on/off" },
+	{ command: "guida", description: "Guida visuale al bot" },
 	{ command: "help", description: "Aiuto" },
 ];
 
