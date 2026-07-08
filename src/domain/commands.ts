@@ -44,6 +44,7 @@ export const HELP_TEXT = [
 	'/seno — ultimo seno usato (o scrivi "che seno?")',
 	"/peso 3400 — registra il peso; /peso mostra lo storico",
 	"/nome Mario — imposta il nome del bimbo/a",
+	"/report on|off — attiva/disattiva i report automatici",
 	"/help — questo messaggio",
 ].join("\n");
 

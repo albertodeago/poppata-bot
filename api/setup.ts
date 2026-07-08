@@ -12,6 +12,7 @@ export const COMMANDS = [
 	{ command: "seno", description: "Ultimo seno usato" },
 	{ command: "peso", description: "Peso: registra o mostra lo storico" },
 	{ command: "nome", description: "Imposta il nome del bimbo/a" },
+	{ command: "report", description: "Report automatici on/off" },
 	{ command: "help", description: "Aiuto" },
 ];
 

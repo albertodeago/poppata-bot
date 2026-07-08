@@ -13,6 +13,10 @@ describe("[SETUP] command list", () => {
 	it("includes /grafici", () => {
 		expect(COMMANDS.some((c) => c.command === "grafici")).toBe(true);
 	});
+
+	it("COMMANDS includes the report toggle", () => {
+		expect(COMMANDS.some((c) => c.command === "report")).toBe(true);
+	});
 });
 
 describe("[SETUP] auth guard", () => {

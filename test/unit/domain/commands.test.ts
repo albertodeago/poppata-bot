@@ -336,3 +336,9 @@ describe("[COMMANDS] graficiCommand", () => {
 		);
 	});
 });
+
+describe("[COMMANDS] /report", () => {
+	it("HELP_TEXT documents the /report command", () => {
+		expect(HELP_TEXT).toContain("/report on|off");
+	});
+});

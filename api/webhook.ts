@@ -18,7 +18,11 @@ import {
 	settimanaCommand,
 	statoCommand,
 } from "../src/domain/commands.js";
-import { nomeCommand, registerChat } from "../src/domain/registration.js";
+import {
+	nomeCommand,
+	registerChat,
+	reportCommand,
+} from "../src/domain/registration.js";
 import { type Env, makeEnv } from "../src/env.js";
 
 let env: Env;
@@ -58,6 +62,10 @@ const initBot = (): void => {
 	bot.command("nome", async (ctx) => {
 		const arg = ctx.message.text.replace(/^\/nome(@\S+)?\s*/, "");
 		await nomeCommand(ctx.chat.id, arg)(env);
+	});
+	bot.command("report", async (ctx) => {
+		const arg = ctx.message.text.replace(/^\/report(@\S+)?\s*/, "");
+		await reportCommand(ctx.chat.id, arg)(env);
 	});
 	bot.command("help", async (ctx) => {
 		await helpCommand(ctx.chat.id)(env);
