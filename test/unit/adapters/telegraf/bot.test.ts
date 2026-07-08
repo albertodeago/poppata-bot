@@ -21,6 +21,7 @@ const makeChatConfigRepo = () => ({
 	count: vi.fn(),
 	create: vi.fn(),
 	setBabyName: vi.fn(),
+	setReportsEnabled: vi.fn(),
 	listAll: vi.fn(),
 });
 const logger = {
@@ -191,7 +192,9 @@ describe("[TELEGRAF adapter]", () => {
 
 	it("gate passes normal text from a registered chat", async () => {
 		const { middleware, chatConfigRepository } = getMiddleware();
-		chatConfigRepository.get.mockResolvedValue(success({ chatId: 7 }));
+		chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 7, reportsEnabled: true }),
+		);
 		const next = vi.fn().mockResolvedValue(undefined);
 		await middleware(
 			{

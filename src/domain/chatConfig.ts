@@ -4,6 +4,8 @@ export interface ChatConfig {
 	chatId: number;
 	/** Baby name shown in report headers; absent until set via /nome. */
 	babyName?: string;
+	/** Whether the cron sends this chat its scheduled reports. Defaults true. */
+	reportsEnabled: boolean;
 }
 
 export interface ChatConfigRepository {
@@ -18,6 +20,11 @@ export interface ChatConfigRepository {
 	}): Promise<Result<ChatConfig>>;
 	/** Set/replace the baby name on an existing (or upserted) row. */
 	setBabyName(chatId: number, babyName: string): Promise<Result<ChatConfig>>;
+	/** Enable/disable the scheduled (cron) reports for a chat. */
+	setReportsEnabled(
+		chatId: number,
+		enabled: boolean,
+	): Promise<Result<ChatConfig>>;
 	/** All registered chats, creation order (for the report cron). */
 	listAll(): Promise<Result<ChatConfig[]>>;
 }

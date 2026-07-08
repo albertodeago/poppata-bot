@@ -72,4 +72,45 @@ describe("[MEMORY chatConfig repo]", () => {
 			expect(r.data.find((c) => c.chatId === 1)?.babyName).toBe("Leo");
 		}
 	});
+
+	it("create defaults reportsEnabled to true", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		const c = await repo.create({ chatId: 1, createdByName: "papà" });
+		if (c.success) expect(c.data.reportsEnabled).toBe(true);
+	});
+
+	it("setReportsEnabled toggles the flag and round-trips via get", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setReportsEnabled(1, false);
+		let got = await repo.get(1);
+		if (got.success) expect(got.data?.reportsEnabled).toBe(false);
+		await repo.setReportsEnabled(1, true);
+		got = await repo.get(1);
+		if (got.success) expect(got.data?.reportsEnabled).toBe(true);
+	});
+
+	it("setBabyName preserves an existing reportsEnabled", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setReportsEnabled(1, false);
+		await repo.setBabyName(1, "Leo");
+		const got = await repo.get(1);
+		if (got.success) {
+			expect(got.data?.babyName).toBe("Leo");
+			expect(got.data?.reportsEnabled).toBe(false);
+		}
+	});
+
+	it("setReportsEnabled preserves an existing babyName", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setBabyName(1, "Leo");
+		await repo.setReportsEnabled(1, false);
+		const got = await repo.get(1);
+		if (got.success) {
+			expect(got.data?.babyName).toBe("Leo");
+			expect(got.data?.reportsEnabled).toBe(false);
+		}
+	});
 });

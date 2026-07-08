@@ -26,7 +26,9 @@ describe("[REGISTRATION] registerChat", () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(success(null));
 		mocks.chatConfigRepository.count.mockResolvedValue(success(0));
-		mocks.chatConfigRepository.create.mockResolvedValue(success({ chatId: 1 }));
+		mocks.chatConfigRepository.create.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
 		await registerChat({ chatId: 1, ...base })(env);
 		expect(mocks.chatConfigRepository.create).toHaveBeenCalledWith({
 			chatId: 1,
@@ -39,9 +41,11 @@ describe("[REGISTRATION] registerChat", () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(success(null));
 		mocks.chatConfigRepository.count.mockResolvedValue(success(0));
-		mocks.chatConfigRepository.create.mockResolvedValue(success({ chatId: 1 }));
+		mocks.chatConfigRepository.create.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
 		mocks.chatConfigRepository.setBabyName.mockResolvedValue(
-			success({ chatId: 1, babyName: "Mario" }),
+			success({ chatId: 1, babyName: "Mario", reportsEnabled: true }),
 		);
 		await registerChat({ chatId: 1, name: "Mario", ...base })(env);
 		expect(mocks.chatConfigRepository.setBabyName).toHaveBeenCalledWith(
@@ -53,7 +57,11 @@ describe("[REGISTRATION] registerChat", () => {
 
 	it("is idempotent — an already-registered chat is not re-created", async () => {
 		const { env, mocks } = makeTestEnv();
-		const existing: ChatConfig = { chatId: 1, babyName: "Leo" };
+		const existing: ChatConfig = {
+			chatId: 1,
+			babyName: "Leo",
+			reportsEnabled: true,
+		};
 		mocks.chatConfigRepository.get.mockResolvedValue(success(existing));
 		await registerChat({ chatId: 1, ...base })(env);
 		expect(mocks.chatConfigRepository.create).not.toHaveBeenCalled();
@@ -63,10 +71,10 @@ describe("[REGISTRATION] registerChat", () => {
 	it("updates the name when /start carries one on a registered chat", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(
-			success({ chatId: 1, babyName: "Leo" }),
+			success({ chatId: 1, babyName: "Leo", reportsEnabled: true }),
 		);
 		mocks.chatConfigRepository.setBabyName.mockResolvedValue(
-			success({ chatId: 1, babyName: "Gigi" }),
+			success({ chatId: 1, babyName: "Gigi", reportsEnabled: true }),
 		);
 		await registerChat({ chatId: 1, name: "Gigi", ...base })(env);
 		expect(mocks.chatConfigRepository.create).not.toHaveBeenCalled();
@@ -88,9 +96,11 @@ describe("[REGISTRATION] registerChat", () => {
 describe("[REGISTRATION] nomeCommand", () => {
 	it("sets a name (impostato) when none was set", async () => {
 		const { env, mocks } = makeTestEnv();
-		mocks.chatConfigRepository.get.mockResolvedValue(success({ chatId: 1 }));
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
 		mocks.chatConfigRepository.setBabyName.mockResolvedValue(
-			success({ chatId: 1, babyName: "Mario" }),
+			success({ chatId: 1, babyName: "Mario", reportsEnabled: true }),
 		);
 		await nomeCommand(1, "Mario")(env);
 		expect(mocks.chatConfigRepository.setBabyName).toHaveBeenCalledWith(
@@ -103,10 +113,10 @@ describe("[REGISTRATION] nomeCommand", () => {
 	it("reports aggiornato when replacing an existing name", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(
-			success({ chatId: 1, babyName: "Leo" }),
+			success({ chatId: 1, babyName: "Leo", reportsEnabled: true }),
 		);
 		mocks.chatConfigRepository.setBabyName.mockResolvedValue(
-			success({ chatId: 1, babyName: "Gigi" }),
+			success({ chatId: 1, babyName: "Gigi", reportsEnabled: true }),
 		);
 		await nomeCommand(1, "Gigi")(env);
 		expect(lastMessage(mocks).toLowerCase()).toContain("aggiornato");
@@ -115,7 +125,7 @@ describe("[REGISTRATION] nomeCommand", () => {
 	it("shows the current name for bare /nome", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(
-			success({ chatId: 1, babyName: "Leo" }),
+			success({ chatId: 1, babyName: "Leo", reportsEnabled: true }),
 		);
 		await nomeCommand(1, "")(env);
 		expect(mocks.chatConfigRepository.setBabyName).not.toHaveBeenCalled();
@@ -124,7 +134,9 @@ describe("[REGISTRATION] nomeCommand", () => {
 
 	it("shows a usage hint for bare /nome when no name is set", async () => {
 		const { env, mocks } = makeTestEnv();
-		mocks.chatConfigRepository.get.mockResolvedValue(success({ chatId: 1 }));
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
 		await nomeCommand(1, "")(env);
 		expect(lastMessage(mocks).toLowerCase()).toContain("/nome");
 	});

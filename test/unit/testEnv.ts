@@ -28,6 +28,8 @@ export const makeTestEnv = () => {
 			create: vi.fn<ChatConfigEnv["chatConfigRepository"]["create"]>(),
 			setBabyName:
 				vi.fn<ChatConfigEnv["chatConfigRepository"]["setBabyName"]>(),
+			setReportsEnabled:
+				vi.fn<ChatConfigEnv["chatConfigRepository"]["setReportsEnabled"]>(),
 			listAll: vi.fn<ChatConfigEnv["chatConfigRepository"]["listAll"]>(),
 		},
 		pendingRepository: {

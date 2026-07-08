@@ -9,14 +9,16 @@ import { tryCatch } from "../../domain/result.js";
 interface ChatConfigRow {
 	chat_id: string;
 	baby_name: string | null;
+	reports_enabled: boolean;
 }
 
 const mapRow = (row: ChatConfigRow): ChatConfig => ({
 	chatId: Number(row.chat_id),
 	...(row.baby_name ? { babyName: row.baby_name } : {}),
+	reportsEnabled: row.reports_enabled,
 });
 
-const COLUMNS = "chat_id, baby_name";
+const COLUMNS = "chat_id, baby_name, reports_enabled";
 
 export const makePgChatConfigRepository = (
 	env: DBEnv & LoggerEnv,
@@ -81,6 +83,23 @@ export const makePgChatConfigRepository = (
 					);
 					const r = rows[0] as ChatConfigRow | undefined;
 					if (!r) throw new Error("setBabyName returned no row");
+					return mapRow(r);
+				},
+				(e) => e,
+			),
+
+		setReportsEnabled: (chatId: number, enabled: boolean) =>
+			tryCatch(
+				async () => {
+					const rows = await env.db.query(
+						`INSERT INTO chat_configs (chat_id, reports_enabled)
+						 VALUES ($1, $2)
+						 ON CONFLICT (chat_id) DO UPDATE SET reports_enabled = EXCLUDED.reports_enabled
+						 RETURNING ${COLUMNS}`,
+						[chatId, enabled],
+					);
+					const r = rows[0] as ChatConfigRow | undefined;
+					if (!r) throw new Error("setReportsEnabled returned no row");
 					return mapRow(r);
 				},
 				(e) => e,

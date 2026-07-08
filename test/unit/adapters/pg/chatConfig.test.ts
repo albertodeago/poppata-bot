@@ -12,6 +12,7 @@ const logger = {
 const row = (over: Record<string, unknown> = {}) => ({
 	chat_id: "-100123",
 	baby_name: null,
+	reports_enabled: true,
 	...over,
 });
 
@@ -115,5 +116,29 @@ describe("[PG chatConfig repo]", () => {
 		const r = await repo.count();
 		expect(r.success).toBe(false);
 		if (!r.success) expect(r.error.message).toBe("db down");
+	});
+
+	it("get maps reportsEnabled from the column", async () => {
+		const db = {
+			query: vi.fn().mockResolvedValue([row({ reports_enabled: false })]),
+		};
+		const repo = makePgChatConfigRepository({ db, logger });
+		const r = await repo.get(-100123);
+		if (r.success) expect(r.data?.reportsEnabled).toBe(false);
+	});
+
+	it("setReportsEnabled upserts and returns the mapped row", async () => {
+		const db = {
+			query: vi.fn().mockResolvedValue([row({ reports_enabled: false })]),
+		};
+		const repo = makePgChatConfigRepository({ db, logger });
+		const r = await repo.setReportsEnabled(-100123, false);
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data.reportsEnabled).toBe(false);
+		const [sql, params] = db.query.mock.calls[0] ?? [];
+		expect(sql).toContain("INSERT INTO chat_configs");
+		expect(sql).toContain("ON CONFLICT (chat_id) DO UPDATE");
+		expect(sql).toContain("reports_enabled");
+		expect(params).toEqual([-100123, false]);
 	});
 });

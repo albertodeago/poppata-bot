@@ -21,13 +21,29 @@ export const makeMemoryChatConfigRepository = ({
 		create: async ({ chatId }) => {
 			const existing = byChat.get(chatId);
 			if (existing) return R.success(existing);
-			const created: ChatConfig = { chatId };
+			const created: ChatConfig = { chatId, reportsEnabled: true };
 			byChat.set(chatId, created);
 			return R.success(created);
 		},
 
 		setBabyName: async (chatId, babyName) => {
-			const updated: ChatConfig = { chatId, babyName };
+			const prev = byChat.get(chatId);
+			const updated: ChatConfig = {
+				chatId,
+				babyName,
+				reportsEnabled: prev?.reportsEnabled ?? true,
+			};
+			byChat.set(chatId, updated);
+			return R.success(updated);
+		},
+
+		setReportsEnabled: async (chatId, enabled) => {
+			const prev = byChat.get(chatId);
+			const updated: ChatConfig = {
+				chatId,
+				...(prev?.babyName ? { babyName: prev.babyName } : {}),
+				reportsEnabled: enabled,
+			};
 			byChat.set(chatId, updated);
 			return R.success(updated);
 		},
