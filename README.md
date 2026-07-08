@@ -64,6 +64,7 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 | `/seno` | show the latest recorded breast side |
 | `/peso [grammi]` | show weight history, or record/update today's weight |
 | `/grafici` | apri la mini app con grafici e statistiche |
+| `/report on\|off` | turn the scheduled reports (daily + weekly) on/off for this chat; default is on |
 | `/help` | show the in-chat help |
 
 The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
