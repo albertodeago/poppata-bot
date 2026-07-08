@@ -197,9 +197,6 @@ describe("[REGISTRATION] reportCommand", () => {
 
 	it("/report with a bad arg shows a usage hint and changes nothing", async () => {
 		const { env, mocks } = makeTestEnv();
-		mocks.chatConfigRepository.get.mockResolvedValue(
-			success({ chatId: 1, reportsEnabled: true }),
-		);
 		await reportCommand(1, "pippo")(env);
 		expect(mocks.chatConfigRepository.setReportsEnabled).not.toHaveBeenCalled();
 		expect(lastMessage(mocks)).toContain("/report on");
