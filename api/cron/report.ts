@@ -35,6 +35,12 @@ export default async function handler(
 
 		// Each registered chat gets its own report from its own data and name.
 		for (const chat of chats) {
+			if (!chat.reportsEnabled) {
+				env.logger.info(
+					`Cron: skipping chat ${chat.chatId} (reports disabled)`,
+				);
+				continue;
+			}
 			env.logger.info(`Cron: sending reports to chat ${chat.chatId}`);
 			await sendDailyReport(chat.chatId, now, chat.babyName)(env);
 			if (isMonday) {
