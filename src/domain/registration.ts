@@ -11,6 +11,11 @@ const WELCOME = "Ciao! 👋 Bot attivato in questa chat.";
 // literal "<nome>" would be read as a (broken) tag.
 const NAME_HINT = 'Scrivi "/nome Mario" per dirmi come si chiama il bimbo/a.';
 const NOME_USAGE = "Usa /nome Mario per impostare il nome.";
+const REPORT_ON_STATE = "📊 Report automatici: attivi";
+const REPORT_OFF_STATE = "📊 Report automatici: disattivati";
+const REPORT_ENABLED = "🔔 Report automatici riattivati.";
+const REPORT_DISABLED = "🔕 Report automatici disattivati.";
+const REPORT_USAGE = "Usa /report on oppure /report off.";
 
 /** Prefilled GitHub-issue link asking the owner to enable an over-cap chat. */
 export const describeIssueLink = (
@@ -153,5 +158,49 @@ export const nomeCommand =
 		await env.bot.sendMessage(
 			chatId,
 			nameSet(trimmed, cur?.babyName !== undefined),
+		);
+	};
+
+/** `/report on|off` toggles the scheduled reports; bare `/report` shows the state. */
+export const reportCommand =
+	(chatId: number, arg: string) =>
+	async (env: RegEnv): Promise<void> => {
+		const trimmed = arg.trim().toLowerCase();
+
+		if (trimmed === "") {
+			const curRes = await env.chatConfigRepository.get(chatId);
+			if (!curRes.success) {
+				env.logger.error("report: get failed", curRes.error);
+				await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+				return;
+			}
+			// Unregistered chats never reach this command (the gate blocks them), so a
+			// missing row is a defensive case — treat it as the default (enabled).
+			const enabled = curRes.data?.reportsEnabled ?? true;
+			await env.bot.sendMessage(
+				chatId,
+				enabled ? REPORT_ON_STATE : REPORT_OFF_STATE,
+			);
+			return;
+		}
+
+		if (trimmed !== "on" && trimmed !== "off") {
+			await env.bot.sendMessage(chatId, REPORT_USAGE);
+			return;
+		}
+
+		const enable = trimmed === "on";
+		const set = await env.chatConfigRepository.setReportsEnabled(
+			chatId,
+			enable,
+		);
+		if (!set.success) {
+			env.logger.error("report: setReportsEnabled failed", set.error);
+			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
+			return;
+		}
+		await env.bot.sendMessage(
+			chatId,
+			enable ? REPORT_ENABLED : REPORT_DISABLED,
 		);
 	};

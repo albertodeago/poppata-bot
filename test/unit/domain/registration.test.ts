@@ -4,6 +4,7 @@ import {
 	describeIssueLink,
 	nomeCommand,
 	registerChat,
+	reportCommand,
 } from "../../../src/domain/registration.js";
 import { success } from "../../../src/domain/result.js";
 import { makeTestEnv } from "../testEnv.js";
@@ -139,6 +140,69 @@ describe("[REGISTRATION] nomeCommand", () => {
 		);
 		await nomeCommand(1, "")(env);
 		expect(lastMessage(mocks).toLowerCase()).toContain("/nome");
+	});
+});
+
+describe("[REGISTRATION] reportCommand", () => {
+	it("bare /report shows the enabled state", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
+		await reportCommand(1, "")(env);
+		expect(mocks.chatConfigRepository.setReportsEnabled).not.toHaveBeenCalled();
+		expect(lastMessage(mocks).toLowerCase()).toContain("attivi");
+	});
+
+	it("bare /report shows the disabled state", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: false }),
+		);
+		await reportCommand(1, "")(env);
+		expect(lastMessage(mocks).toLowerCase()).toContain("disattivati");
+	});
+
+	it("/report off disables the reports", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
+		mocks.chatConfigRepository.setReportsEnabled.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: false }),
+		);
+		await reportCommand(1, "off")(env);
+		expect(mocks.chatConfigRepository.setReportsEnabled).toHaveBeenCalledWith(
+			1,
+			false,
+		);
+		expect(lastMessage(mocks).toLowerCase()).toContain("disattivati");
+	});
+
+	it("/report on enables the reports", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: false }),
+		);
+		mocks.chatConfigRepository.setReportsEnabled.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
+		await reportCommand(1, "on")(env);
+		expect(mocks.chatConfigRepository.setReportsEnabled).toHaveBeenCalledWith(
+			1,
+			true,
+		);
+		expect(lastMessage(mocks).toLowerCase()).toContain("riattivati");
+	});
+
+	it("/report with a bad arg shows a usage hint and changes nothing", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 1, reportsEnabled: true }),
+		);
+		await reportCommand(1, "pippo")(env);
+		expect(mocks.chatConfigRepository.setReportsEnabled).not.toHaveBeenCalled();
+		expect(lastMessage(mocks)).toContain("/report on");
 	});
 });
 
