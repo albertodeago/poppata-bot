@@ -37,9 +37,15 @@ const mockRes = () => {
 };
 
 describe("[CRON report] per-chat toggle", () => {
+	let prev: string | undefined;
 	beforeEach(() => {
+		prev = process.env.CRON_SECRET;
 		vi.clearAllMocks();
 		process.env.CRON_SECRET = "secret";
+	});
+	afterEach(() => {
+		if (prev === undefined) delete process.env.CRON_SECRET;
+		else process.env.CRON_SECRET = prev;
 	});
 
 	it("reports to enabled chats and skips disabled ones", async () => {
