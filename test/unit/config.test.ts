@@ -9,6 +9,7 @@ const FULL_ENV = {
 	WEBHOOK_URL: "https://ex.com",
 	WEBHOOK_SECRET: "whs",
 	MINIAPP_URL: "https://t.me/Bot/app",
+	ADMIN_CHAT_ID: "-5401484779",
 };
 
 describe("[CONFIG] getConfig", () => {
@@ -24,8 +25,7 @@ describe("[CONFIG] getConfig", () => {
 			"WEBHOOK_URL",
 			"WEBHOOK_SECRET",
 			"MINIAPP_URL",
-			"MAX_CHATS",
-			"REPO_ISSUES_URL",
+			"ADMIN_CHAT_ID",
 		]) {
 			delete process.env[k];
 		}
@@ -67,27 +67,24 @@ describe("[CONFIG] getConfig", () => {
 		expect(() => getConfig()).toThrow(/MINIAPP_URL/);
 	});
 
-	it("defaults maxChats to 5 and repoIssuesUrl to the repo issues URL", () => {
+	it("parses ADMIN_CHAT_ID into a number (negative group id)", () => {
 		Object.assign(process.env, FULL_ENV);
-		const c = getConfig();
-		expect(c.maxChats).toBe(5);
-		expect(c.repoIssuesUrl).toBe(
-			"https://github.com/albertodeago/poppata-bot/issues",
-		);
+		expect(getConfig().adminChatId).toBe(-5401484779);
 	});
 
-	it("uses MAX_CHATS and REPO_ISSUES_URL overrides when set", () => {
-		Object.assign(process.env, FULL_ENV, {
-			MAX_CHATS: "20",
-			REPO_ISSUES_URL: "https://github.com/x/y/issues",
-		});
-		const c = getConfig();
-		expect(c.maxChats).toBe(20);
-		expect(c.repoIssuesUrl).toBe("https://github.com/x/y/issues");
+	it("throws when ADMIN_CHAT_ID is missing", () => {
+		Object.assign(process.env, FULL_ENV);
+		delete process.env.ADMIN_CHAT_ID;
+		expect(() => getConfig()).toThrow(/ADMIN_CHAT_ID/);
 	});
 
-	it("throws when MAX_CHATS is not a positive number", () => {
-		Object.assign(process.env, FULL_ENV, { MAX_CHATS: "nope" });
-		expect(() => getConfig()).toThrow(/MAX_CHATS/);
+	it("throws when ADMIN_CHAT_ID is not a number", () => {
+		Object.assign(process.env, FULL_ENV, { ADMIN_CHAT_ID: "nope" });
+		expect(() => getConfig()).toThrow(/ADMIN_CHAT_ID/);
+	});
+
+	it("throws when ADMIN_CHAT_ID has trailing junk (no silent partial parse)", () => {
+		Object.assign(process.env, FULL_ENV, { ADMIN_CHAT_ID: "-100 foo" });
+		expect(() => getConfig()).toThrow(/ADMIN_CHAT_ID/);
 	});
 });

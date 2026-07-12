@@ -17,6 +17,7 @@ const FULL_ENV = {
 	WEBHOOK_URL: "https://ex.com",
 	WEBHOOK_SECRET: "whs",
 	MINIAPP_URL: "https://t.me/Bot/app",
+	ADMIN_CHAT_ID: "-999",
 };
 
 describe("[STATS] guards", () => {

@@ -10,14 +10,9 @@ export type Config = {
 	miniAppUrl: string;
 	/** Public URL of the visual onboarding guide, derived from webhookUrl. */
 	guideUrl: string;
-	/** Max number of chats that may self-register (MAX_CHATS, default 5). */
-	maxChats: number;
-	/** Base repo issues URL for the "bot full" request-access link. */
-	repoIssuesUrl: string;
+	/** Telegram chat where access requests land and the admin approves/bans. */
+	adminChatId: number;
 };
-
-const DEFAULT_REPO_ISSUES_URL =
-	"https://github.com/albertodeago/poppata-bot/issues";
 
 export type ConfigEnv = {
 	config: Config;
@@ -30,12 +25,11 @@ const required = (name: string): string => {
 };
 
 export const getConfig = (): Config => {
-	const maxChats = process.env.MAX_CHATS
-		? Number.parseInt(process.env.MAX_CHATS, 10)
-		: 5;
-	if (Number.isNaN(maxChats) || maxChats < 1) {
-		throw new Error("MAX_CHATS must be a positive integer");
+	const adminChatIdRaw = required("ADMIN_CHAT_ID");
+	if (!/^-?\d+$/.test(adminChatIdRaw)) {
+		throw new Error("ADMIN_CHAT_ID must be an integer");
 	}
+	const adminChatId = Number.parseInt(adminChatIdRaw, 10);
 
 	const webhookUrl = required("WEBHOOK_URL");
 	const config: Config = {
@@ -48,8 +42,7 @@ export const getConfig = (): Config => {
 		webhookSecret: required("WEBHOOK_SECRET"),
 		miniAppUrl: required("MINIAPP_URL"),
 		guideUrl: `${webhookUrl.replace(/\/$/, "")}/guida.html`,
-		maxChats,
-		repoIssuesUrl: process.env.REPO_ISSUES_URL ?? DEFAULT_REPO_ISSUES_URL,
+		adminChatId,
 	};
 	return config;
 };

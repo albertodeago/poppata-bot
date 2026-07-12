@@ -13,16 +13,15 @@ const config = {
 	webhookSecret: "whs",
 	miniAppUrl: "https://t.me/Bot/app",
 	guideUrl: "https://ex.com/guida.html",
-	maxChats: 5,
-	repoIssuesUrl: "https://github.com/x/y/issues",
+	adminChatId: -999,
 };
 
 const makeChatConfigRepo = () => ({
 	get: vi.fn(),
-	count: vi.fn(),
 	create: vi.fn(),
 	setBabyName: vi.fn(),
 	setReportsEnabled: vi.fn(),
+	setStatus: vi.fn(),
 	listAll: vi.fn(),
 });
 const logger = {
@@ -127,6 +126,26 @@ describe("[TELEGRAF adapter]", () => {
 		);
 	});
 
+	it("sendAccessRequest builds approve:/ban: inline buttons for the target chat", async () => {
+		const { Ctor, telegram } = makeFake();
+		const { botEnv } = makeTelegrafAdapter(Ctor)({
+			config,
+			logger,
+			chatConfigRepository: makeChatConfigRepo(),
+		});
+		await botEnv.bot.sendAccessRequest(-999, "Nuova richiesta", 7);
+		expect(telegram.sendMessage).toHaveBeenCalledWith(-999, "Nuova richiesta", {
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{ text: "✅ Approva", callback_data: "approve:7" },
+						{ text: "🚫 Banna", callback_data: "ban:7" },
+					],
+				],
+			},
+		});
+	});
+
 	it("clearKeyboard removes the markup and swallows 'not modified'", async () => {
 		const { Ctor, telegram } = makeFake();
 		telegram.editMessageReplyMarkup.mockRejectedValueOnce(
@@ -191,10 +210,10 @@ describe("[TELEGRAF adapter]", () => {
 		expect(next).not.toHaveBeenCalled();
 	});
 
-	it("gate passes normal text from a registered chat", async () => {
+	it("gate passes normal text from an approved chat", async () => {
 		const { middleware, chatConfigRepository } = getMiddleware();
 		chatConfigRepository.get.mockResolvedValue(
-			success({ chatId: 7, reportsEnabled: true }),
+			success({ chatId: 7, reportsEnabled: true, status: "approved" }),
 		);
 		const next = vi.fn().mockResolvedValue(undefined);
 		await middleware(
@@ -206,5 +225,37 @@ describe("[TELEGRAF adapter]", () => {
 			next,
 		);
 		expect(next).toHaveBeenCalledTimes(1);
+	});
+
+	it("gate drops normal text from a pending (not-yet-approved) chat", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
+		chatConfigRepository.get.mockResolvedValue(
+			success({ chatId: 7, reportsEnabled: true, status: "pending" }),
+		);
+		const next = vi.fn().mockResolvedValue(undefined);
+		await middleware(
+			{
+				chat: { id: 7 },
+				updateType: "message",
+				message: { text: "poppata dx" },
+			},
+			next,
+		);
+		expect(next).not.toHaveBeenCalled();
+	});
+
+	it("gate always passes the admin chat, even with no row", async () => {
+		const { middleware, chatConfigRepository } = getMiddleware();
+		const next = vi.fn().mockResolvedValue(undefined);
+		await middleware(
+			{
+				chat: { id: -999 },
+				updateType: "callback_query",
+				callbackQuery: { data: "approve:7" },
+			},
+			next,
+		);
+		expect(next).toHaveBeenCalledTimes(1);
+		expect(chatConfigRepository.get).not.toHaveBeenCalled();
 	});
 });

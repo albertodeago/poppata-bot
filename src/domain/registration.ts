@@ -16,20 +16,20 @@ const REPORT_OFF_STATE = "📊 Report automatici: disattivati";
 const REPORT_ENABLED = "🔔 Report automatici riattivati.";
 const REPORT_DISABLED = "🔕 Report automatici disattivati.";
 const REPORT_USAGE = "Usa /report on oppure /report off.";
+const REQUEST_SENT =
+	"📨 Richiesta di accesso inviata! Attendi l'approvazione dell'amministratore.";
+const ALREADY_PENDING = "⏳ La tua richiesta è in attesa di approvazione.";
 
-/** Prefilled GitHub-issue link asking the owner to enable an over-cap chat. */
-export const describeIssueLink = (
-	repoIssuesUrl: string,
+/** The admin-facing text for a new access request (with the requester handle). */
+const accessRequestText = (
 	chatId: number,
+	userName: string,
+	username?: string,
 	chatTitle?: string,
 ): string => {
-	const title = `Enable bot in chat ${chatId}`;
-	const body = `Please enable poppata-bot in this chat.\n${
-		chatTitle ? `Chat: ${chatTitle}\n` : ""
-	}ChatId: ${chatId}`;
-	return `${repoIssuesUrl}/new?title=${encodeURIComponent(
-		title,
-	)}&body=${encodeURIComponent(body)}`;
+	const who = username ? `${userName} (@${username})` : userName;
+	const where = chatTitle ? `${chatTitle} (${chatId})` : `chat ${chatId}`;
+	return `📨 Nuova richiesta di accesso\n${where}\nda ${who}`;
 };
 
 const nameSet = (name: string, updated: boolean): string =>
@@ -40,21 +40,16 @@ const welcomeMessage = (guideUrl: string, babyName?: string): string => {
 	return `${WELCOME}\n${nameLine}\n\n${HELP_TEXT}\n\n📖 <a href="${guideUrl}">Guida visuale: come usare il bot</a>`;
 };
 
-const registerFull = (
-	maxChats: number,
-	url: string,
-	guideUrl: string,
-): string =>
-	`Mi dispiace, il bot ha raggiunto il numero massimo di chat (${maxChats}). Richiedi l'attivazione qui: ${url}\n\n📖 Nel frattempo, guarda come funziona: ${guideUrl}`;
-
 export interface RegisterInput {
 	chatId: number;
 	userName: string;
 	chatTitle?: string;
-	/** Optional inline name from `/start Mario`. */
+	/** Optional inline name from `/start Mario` (applied only to approved chats). */
 	name?: string;
-	maxChats: number;
-	repoIssuesUrl: string;
+	/** Requester's Telegram @handle, if they have one. */
+	username?: string;
+	/** Chat that receives the access-request notification. */
+	adminChatId: number;
 	guideUrl: string;
 }
 
@@ -67,10 +62,24 @@ export const registerChat =
 			userName,
 			chatTitle,
 			name,
-			maxChats,
-			repoIssuesUrl,
+			username,
+			adminChatId,
 			guideUrl,
 		} = input;
+
+		// Notify the admin, tolerating a transient failure: a lost notification is
+		// recovered on the next /start (which re-enters via the pending branch).
+		const notifyAdmin = async (): Promise<void> => {
+			try {
+				await env.bot.sendAccessRequest(
+					adminChatId,
+					accessRequestText(chatId, userName, username, chatTitle),
+					chatId,
+				);
+			} catch (e) {
+				env.logger.error("register: sendAccessRequest failed", e);
+			}
+		};
 
 		const existingRes = await env.chatConfigRepository.get(chatId);
 		if (!existingRes.success) {
@@ -81,6 +90,15 @@ export const registerChat =
 		const existing = existingRes.data;
 
 		if (existing) {
+			// Banned chats are dropped silently. A pending chat that retries re-pings
+			// the admin (self-heals a missed notification) and is told to wait.
+			if (existing.status === "banned") return;
+			if (existing.status === "pending") {
+				await notifyAdmin();
+				await env.bot.sendMessage(chatId, ALREADY_PENDING);
+				return;
+			}
+			// Approved: greet, or apply an inline /start name.
 			if (name) {
 				const set = await env.chatConfigRepository.setBabyName(chatId, name);
 				if (!set.success) {
@@ -102,45 +120,19 @@ export const registerChat =
 			return;
 		}
 
-		// New chat: enforce the registration cap before creating a row.
-		const countRes = await env.chatConfigRepository.count();
-		if (!countRes.success) {
-			env.logger.error("register: count failed", countRes.error);
-			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
-			return;
-		}
-		if (countRes.data >= maxChats) {
-			await env.bot.sendMessage(
-				chatId,
-				registerFull(
-					maxChats,
-					describeIssueLink(repoIssuesUrl, chatId, chatTitle),
-					guideUrl,
-				),
-			);
-			return;
-		}
-
+		// New chat: create a pending request and notify the admin to approve/ban.
 		const created = await env.chatConfigRepository.create({
 			chatId,
 			createdByName: userName,
+			...(username ? { username } : {}),
 		});
 		if (!created.success) {
 			env.logger.error("register: create failed", created.error);
 			await env.bot.sendMessage(chatId, INTERNAL_ERROR);
 			return;
 		}
-		if (name) {
-			const set = await env.chatConfigRepository.setBabyName(chatId, name);
-			if (!set.success) {
-				env.logger.error("register: setBabyName failed", set.error);
-				await env.bot.sendMessage(chatId, INTERNAL_ERROR);
-				return;
-			}
-		}
-		await env.bot.sendMessage(chatId, welcomeMessage(guideUrl, name), {
-			parseMode: "HTML",
-		});
+		await notifyAdmin();
+		await env.bot.sendMessage(chatId, REQUEST_SENT);
 	};
 
 /** `/nome Mario` sets the name; bare `/nome` shows it (or a usage hint). */

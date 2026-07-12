@@ -55,6 +55,11 @@ export const makeConsoleBot = (
 			answerCallback: async (_id, text) => {
 				if (text) console.log(`   (callback: ${text})`);
 			},
+			sendAccessRequest: async (adminChatId, text, targetChatId) => {
+				console.log(
+					`\n📨 [admin ${adminChatId}] ${text}\n   [✅ Approva] [🚫 Banna]   (chat ${targetChatId})`,
+				);
+			},
 			clearKeyboard: async (_chatId, messageId) => {
 				console.log(`   (tastiera rimossa da msg ${messageId})`);
 			},

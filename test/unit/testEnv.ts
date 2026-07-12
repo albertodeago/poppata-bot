@@ -24,12 +24,12 @@ export const makeTestEnv = () => {
 		},
 		chatConfigRepository: {
 			get: vi.fn<ChatConfigEnv["chatConfigRepository"]["get"]>(),
-			count: vi.fn<ChatConfigEnv["chatConfigRepository"]["count"]>(),
 			create: vi.fn<ChatConfigEnv["chatConfigRepository"]["create"]>(),
 			setBabyName:
 				vi.fn<ChatConfigEnv["chatConfigRepository"]["setBabyName"]>(),
 			setReportsEnabled:
 				vi.fn<ChatConfigEnv["chatConfigRepository"]["setReportsEnabled"]>(),
+			setStatus: vi.fn<ChatConfigEnv["chatConfigRepository"]["setStatus"]>(),
 			listAll: vi.fn<ChatConfigEnv["chatConfigRepository"]["listAll"]>(),
 		},
 		pendingRepository: {
@@ -50,6 +50,7 @@ export const makeTestEnv = () => {
 			sendFeedTypePrompt: vi.fn<BotEnv["bot"]["sendFeedTypePrompt"]>(),
 			answerCallback: vi.fn<BotEnv["bot"]["answerCallback"]>(),
 			clearKeyboard: vi.fn<BotEnv["bot"]["clearKeyboard"]>(),
+			sendAccessRequest: vi.fn<BotEnv["bot"]["sendAccessRequest"]>(),
 			sendLinkButton: vi.fn<BotEnv["bot"]["sendLinkButton"]>(),
 		},
 		logger: {

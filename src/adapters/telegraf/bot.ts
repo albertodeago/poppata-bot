@@ -15,13 +15,15 @@ export const makeTelegrafAdapter =
 	(env: ConfigEnv & LoggerEnv & ChatConfigEnv): TelegrafAdapter => {
 		const bot = new telegraf(env.config.botToken);
 
-		// Registration gate: a chat is served once it has a chat_configs row. The
-		// entry points that can CREATE that row (/start, /help, and the
-		// my_chat_member add-event) always pass; everything else from an
-		// unregistered chat is dropped before it can parse text or call Gemini.
+		// Access gate: a chat is served once its chat_configs row is `approved`.
+		// The admin chat always passes (its approve/ban controls must not be
+		// gated). The entry points that can CREATE a request (/start, /help, and
+		// the my_chat_member add-event) always pass; everything else from a
+		// non-approved chat is dropped before it can parse text or call Gemini.
 		bot.use(async (ctx, next) => {
 			const chatId = ctx.chat?.id;
 			if (chatId === undefined) return next();
+			if (chatId === env.config.adminChatId) return next();
 
 			const msg = ctx.message;
 			const text = msg && "text" in msg ? msg.text : undefined;
@@ -32,8 +34,8 @@ export const makeTelegrafAdapter =
 			if (isEntry) return next();
 
 			const reg = await env.chatConfigRepository.get(chatId);
-			if (!reg.success || !reg.data) {
-				env.logger.info(`Ignoring update from unregistered chat ${chatId}`);
+			if (!reg.success || !reg.data || reg.data.status !== "approved") {
+				env.logger.info(`Ignoring update from non-approved chat ${chatId}`);
 				return;
 			}
 			return next();
@@ -122,6 +124,21 @@ export const makeTelegrafAdapter =
 						}
 						throw e;
 					}
+				},
+				sendAccessRequest: async (adminChatId, text, targetChatId) => {
+					await bot.telegram.sendMessage(adminChatId, text, {
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{
+										text: "✅ Approva",
+										callback_data: `approve:${targetChatId}`,
+									},
+									{ text: "🚫 Banna", callback_data: `ban:${targetChatId}` },
+								],
+							],
+						},
+					});
 				},
 				sendLinkButton: async (chatId, text, buttonText, url) => {
 					await bot.telegram.sendMessage(chatId, text, {

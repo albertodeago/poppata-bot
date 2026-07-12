@@ -1,4 +1,5 @@
 import type {
+	AccessStatus,
 	ChatConfig,
 	ChatConfigRepository,
 } from "../../domain/chatConfig.js";
@@ -10,15 +11,19 @@ interface ChatConfigRow {
 	chat_id: string;
 	baby_name: string | null;
 	reports_enabled: boolean;
+	status: string;
+	username: string | null;
 }
 
 const mapRow = (row: ChatConfigRow): ChatConfig => ({
 	chatId: Number(row.chat_id),
 	...(row.baby_name ? { babyName: row.baby_name } : {}),
 	reportsEnabled: row.reports_enabled,
+	status: row.status as AccessStatus,
+	...(row.username ? { username: row.username } : {}),
 });
 
-const COLUMNS = "chat_id, baby_name, reports_enabled";
+const COLUMNS = "chat_id, baby_name, reports_enabled, status, username";
 
 export const makePgChatConfigRepository = (
 	env: DBEnv & LoggerEnv,
@@ -39,26 +44,15 @@ export const makePgChatConfigRepository = (
 	return {
 		get,
 
-		count: () =>
+		create: ({ chatId, createdByName, username }) =>
 			tryCatch(
 				async () => {
 					const rows = await env.db.query(
-						"SELECT count(*)::int AS n FROM chat_configs",
-					);
-					return Number((rows[0] as { n: number }).n);
-				},
-				(e) => e,
-			),
-
-		create: ({ chatId, createdByName }) =>
-			tryCatch(
-				async () => {
-					const rows = await env.db.query(
-						`INSERT INTO chat_configs (chat_id, created_by_name)
-						 VALUES ($1, $2)
+						`INSERT INTO chat_configs (chat_id, created_by_name, username)
+						 VALUES ($1, $2, $3)
 						 ON CONFLICT (chat_id) DO NOTHING
 						 RETURNING ${COLUMNS}`,
-						[chatId, createdByName],
+						[chatId, createdByName, username ?? null],
 					);
 					const r = rows[0] as ChatConfigRow | undefined;
 					if (r) return mapRow(r);
@@ -105,11 +99,28 @@ export const makePgChatConfigRepository = (
 				(e) => e,
 			),
 
+		setStatus: (chatId: number, status: AccessStatus) =>
+			tryCatch(
+				async () => {
+					const rows = await env.db.query(
+						`UPDATE chat_configs SET status = $2
+						 WHERE chat_id = $1
+						 RETURNING ${COLUMNS}`,
+						[chatId, status],
+					);
+					const r = rows[0] as ChatConfigRow | undefined;
+					if (!r) throw new Error(`setStatus: no chat ${chatId}`);
+					return mapRow(r);
+				},
+				(e) => e,
+			),
+
 		listAll: () =>
 			tryCatch(
 				async () => {
 					const rows = await env.db.query(
-						`SELECT ${COLUMNS} FROM chat_configs ORDER BY created_at`,
+						`SELECT ${COLUMNS} FROM chat_configs
+						 WHERE status = 'approved' ORDER BY created_at`,
 					);
 					return (rows as ChatConfigRow[]).map(mapRow);
 				},

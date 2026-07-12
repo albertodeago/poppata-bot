@@ -1,11 +1,12 @@
 /**
- * Manually register (enable) a chat, bypassing the self-serve cap.
+ * Manually approve (enable) a chat from the CLI — a fallback for the in-Telegram
+ * approve flow.
  *
  *   npm run enable-chat -- <chatId> [nome]
  *
- * Use it to seed the existing chat(s) at cutover, or to honour a request-access
- * issue once the bot is at its MAX_CHATS limit. Reads DATABASE_URL from .env
- * (use the Session pooler / 5432 string, same as migrations).
+ * Creates the chat's row if missing and sets its access status to `approved`.
+ * Reads DATABASE_URL from .env (use the Session pooler / 5432 string, same as
+ * migrations).
  */
 import { config as loadEnv } from "dotenv";
 import { Pool } from "pg";
@@ -48,6 +49,11 @@ const run = async (): Promise<void> => {
 	});
 	if (!created.success) {
 		console.error("create failed:", created.error);
+		process.exit(1);
+	}
+	const approved = await repo.setStatus(chatId, "approved");
+	if (!approved.success) {
+		console.error("setStatus failed:", approved.error);
 		process.exit(1);
 	}
 	if (name) {

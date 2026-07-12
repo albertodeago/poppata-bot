@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type { Chat } from "telegraf/types";
+import { approveChat, banChat } from "../src/domain/access.js";
 import {
 	handleCallback,
 	handleMessage,
@@ -46,8 +47,8 @@ const registerFrom = (
 		userName: senderName(from),
 		...(chatTitle ? { chatTitle } : {}),
 		...(name ? { name } : {}),
-		maxChats: env.config.maxChats,
-		repoIssuesUrl: env.config.repoIssuesUrl,
+		...(from?.username ? { username: from.username } : {}),
+		adminChatId: env.config.adminChatId,
 		guideUrl: env.config.guideUrl,
 	})(env);
 };
@@ -61,6 +62,72 @@ const initBot = (): void => {
 		const name = ctx.message.text.replace(/^\/start(@\S+)?\s*/, "").trim();
 		await registerFrom(ctx.chat, ctx.from, name || undefined);
 	});
+
+	// --- Admin access controls (only honoured from the ADMIN_CHAT_ID chat) ---
+	const isAdmin = (chatId?: number): boolean =>
+		chatId === env.config.adminChatId;
+
+	bot.command("approva", async (ctx) => {
+		if (!isAdmin(ctx.chat.id)) return;
+		const arg = ctx.message.text.replace(/^\/approva(@\S+)?\s*/, "").trim();
+		const targetId = Number.parseInt(arg, 10);
+		if (Number.isNaN(targetId)) {
+			await ctx.reply("Usa /approva <chatId>");
+			return;
+		}
+		const res = await approveChat(targetId)(env);
+		await ctx.reply(
+			res.success ? `✅ Approvata: ${targetId}` : "Errore, riprova.",
+		);
+	});
+	bot.command("banna", async (ctx) => {
+		if (!isAdmin(ctx.chat.id)) return;
+		const arg = ctx.message.text.replace(/^\/banna(@\S+)?\s*/, "").trim();
+		const targetId = Number.parseInt(arg, 10);
+		if (Number.isNaN(targetId)) {
+			await ctx.reply("Usa /banna <chatId>");
+			return;
+		}
+		const res = await banChat(targetId)(env);
+		await ctx.reply(
+			res.success ? `🚫 Bannata: ${targetId}` : "Errore, riprova.",
+		);
+	});
+	// Editing the request message is best-effort: a double-tap or an old message
+	// makes Telegram reject the edit, which must not fail the whole update (that
+	// would 500 → Telegram retry → re-run the approve/ban side effects).
+	const markHandled = async (
+		ctx: { editMessageText(text: string): Promise<unknown> },
+		text: string,
+	): Promise<void> => {
+		try {
+			await ctx.editMessageText(text);
+		} catch {
+			// message not modified / too old / uneditable — nothing to do.
+		}
+	};
+
+	bot.action(/^approve:(-?\d+)$/, async (ctx) => {
+		if (!isAdmin(ctx.chat?.id)) {
+			await ctx.answerCbQuery();
+			return;
+		}
+		const targetId = Number(ctx.match[1]);
+		const res = await approveChat(targetId)(env);
+		await ctx.answerCbQuery(res.success ? "Approvata" : "Errore");
+		if (res.success) await markHandled(ctx, `✅ Approvata: ${targetId}`);
+	});
+	bot.action(/^ban:(-?\d+)$/, async (ctx) => {
+		if (!isAdmin(ctx.chat?.id)) {
+			await ctx.answerCbQuery();
+			return;
+		}
+		const targetId = Number(ctx.match[1]);
+		const res = await banChat(targetId)(env);
+		await ctx.answerCbQuery(res.success ? "Bannata" : "Errore");
+		if (res.success) await markHandled(ctx, `🚫 Bannata: ${targetId}`);
+	});
+
 	bot.command("nome", async (ctx) => {
 		const arg = ctx.message.text.replace(/^\/nome(@\S+)?\s*/, "");
 		await nomeCommand(ctx.chat.id, arg)(env);

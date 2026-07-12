@@ -37,9 +37,7 @@ import type { WeightEnv } from "./domain/weight.js";
 
 const DEV_CHAT_ID = 1;
 const DEV_USER_ID = 1;
-const DEV_MAX_CHATS = 5;
-const DEV_REPO_ISSUES_URL =
-	"https://github.com/albertodeago/poppata-bot/issues";
+const DEV_ADMIN_CHAT_ID = 1;
 const DEV_MINIAPP_URL = "https://t.me/Bot/app";
 const DEV_GUIDE_URL = "http://localhost:3000/guida.html";
 
@@ -168,8 +166,7 @@ const handleLine = async (line: string): Promise<void> => {
 			chatId: DEV_CHAT_ID,
 			userName: "papà",
 			...(name ? { name } : {}),
-			maxChats: DEV_MAX_CHATS,
-			repoIssuesUrl: DEV_REPO_ISSUES_URL,
+			adminChatId: DEV_ADMIN_CHAT_ID,
 			guideUrl: DEV_GUIDE_URL,
 		})(env);
 		return;

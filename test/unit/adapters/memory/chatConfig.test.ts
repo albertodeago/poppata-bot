@@ -17,16 +17,24 @@ describe("[MEMORY chatConfig repo]", () => {
 		if (r.success) expect(r.data).toBeNull();
 	});
 
-	it("create registers a chat with no name yet", async () => {
+	it("create registers a chat as pending with no name yet", async () => {
 		const repo = makeMemoryChatConfigRepository({ logger });
 		const c = await repo.create({ chatId: 1, createdByName: "papà" });
 		expect(c.success).toBe(true);
 		if (c.success) {
 			expect(c.data.chatId).toBe(1);
+			expect(c.data.status).toBe("pending");
 			expect(c.data.babyName).toBeUndefined();
 		}
 		const got = await repo.get(1);
 		if (got.success) expect(got.data?.chatId).toBe(1);
+	});
+
+	it("create stores the requester username when provided", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "papà", username: "tizio" });
+		const got = await repo.get(1);
+		if (got.success) expect(got.data?.username).toBe("tizio");
 	});
 
 	it("create is idempotent — a second call keeps the existing row", async () => {
@@ -36,8 +44,6 @@ describe("[MEMORY chatConfig repo]", () => {
 		await repo.create({ chatId: 1, createdByName: "mamma" });
 		const got = await repo.get(1);
 		if (got.success) expect(got.data?.babyName).toBe("Leo");
-		const n = await repo.count();
-		if (n.success) expect(n.data).toBe(1);
 	});
 
 	it("setBabyName sets and replaces the name", async () => {
@@ -51,25 +57,43 @@ describe("[MEMORY chatConfig repo]", () => {
 		if (got.success) expect(got.data?.babyName).toBe("Gigi");
 	});
 
-	it("count reflects the number of registered chats", async () => {
+	it("setStatus moves the chat through its lifecycle, preserving other fields", async () => {
 		const repo = makeMemoryChatConfigRepository({ logger });
-		expect((await repo.count()).success).toBe(true);
-		await repo.create({ chatId: 1, createdByName: "a" });
-		await repo.create({ chatId: 2, createdByName: "b" });
-		const n = await repo.count();
-		if (n.success) expect(n.data).toBe(2);
+		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setBabyName(1, "Leo");
+		await repo.setReportsEnabled(1, false);
+		const set = await repo.setStatus(1, "approved");
+		expect(set.success).toBe(true);
+		if (set.success) expect(set.data.status).toBe("approved");
+		const got = await repo.get(1);
+		if (got.success) {
+			expect(got.data?.status).toBe("approved");
+			expect(got.data?.babyName).toBe("Leo");
+			expect(got.data?.reportsEnabled).toBe(false);
+		}
 	});
 
-	it("listAll returns every registered chat", async () => {
+	it("setStatus errors when the chat has no row (parity with pg)", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		const r = await repo.setStatus(999, "approved");
+		expect(r.success).toBe(false);
+		const got = await repo.get(999);
+		if (got.success) expect(got.data).toBeNull();
+	});
+
+	it("listAll returns only approved chats", async () => {
 		const repo = makeMemoryChatConfigRepository({ logger });
 		await repo.create({ chatId: 1, createdByName: "a" });
+		await repo.setStatus(1, "approved");
 		await repo.setBabyName(1, "Leo");
-		await repo.create({ chatId: 2, createdByName: "b" });
+		await repo.create({ chatId: 2, createdByName: "b" }); // stays pending
+		await repo.create({ chatId: 3, createdByName: "c" });
+		await repo.setStatus(3, "banned");
 		const r = await repo.listAll();
 		expect(r.success).toBe(true);
 		if (r.success) {
-			expect(r.data.map((c) => c.chatId).sort()).toEqual([1, 2]);
-			expect(r.data.find((c) => c.chatId === 1)?.babyName).toBe("Leo");
+			expect(r.data.map((c) => c.chatId)).toEqual([1]);
+			expect(r.data[0]?.babyName).toBe("Leo");
 		}
 	});
 
@@ -90,27 +114,31 @@ describe("[MEMORY chatConfig repo]", () => {
 		if (got.success) expect(got.data?.reportsEnabled).toBe(true);
 	});
 
-	it("setBabyName preserves an existing reportsEnabled", async () => {
+	it("setBabyName preserves an existing reportsEnabled and status", async () => {
 		const repo = makeMemoryChatConfigRepository({ logger });
 		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setStatus(1, "approved");
 		await repo.setReportsEnabled(1, false);
 		await repo.setBabyName(1, "Leo");
 		const got = await repo.get(1);
 		if (got.success) {
 			expect(got.data?.babyName).toBe("Leo");
 			expect(got.data?.reportsEnabled).toBe(false);
+			expect(got.data?.status).toBe("approved");
 		}
 	});
 
-	it("setReportsEnabled preserves an existing babyName", async () => {
+	it("setReportsEnabled preserves an existing babyName and status", async () => {
 		const repo = makeMemoryChatConfigRepository({ logger });
 		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setStatus(1, "approved");
 		await repo.setBabyName(1, "Leo");
 		await repo.setReportsEnabled(1, false);
 		const got = await repo.get(1);
 		if (got.success) {
 			expect(got.data?.babyName).toBe("Leo");
 			expect(got.data?.reportsEnabled).toBe(false);
+			expect(got.data?.status).toBe("approved");
 		}
 	});
 });

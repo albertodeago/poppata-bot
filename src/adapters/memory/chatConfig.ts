@@ -16,12 +16,15 @@ export const makeMemoryChatConfigRepository = ({
 	return {
 		get: async (chatId) => R.success(byChat.get(chatId) ?? null),
 
-		count: async () => R.success(byChat.size),
-
-		create: async ({ chatId }) => {
+		create: async ({ chatId, username }) => {
 			const existing = byChat.get(chatId);
 			if (existing) return R.success(existing);
-			const created: ChatConfig = { chatId, reportsEnabled: true };
+			const created: ChatConfig = {
+				chatId,
+				reportsEnabled: true,
+				status: "pending",
+				...(username ? { username } : {}),
+			};
 			byChat.set(chatId, created);
 			return R.success(created);
 		},
@@ -32,6 +35,8 @@ export const makeMemoryChatConfigRepository = ({
 				chatId,
 				babyName,
 				reportsEnabled: prev?.reportsEnabled ?? true,
+				status: prev?.status ?? "pending",
+				...(prev?.username ? { username: prev.username } : {}),
 			};
 			byChat.set(chatId, updated);
 			return R.success(updated);
@@ -43,11 +48,30 @@ export const makeMemoryChatConfigRepository = ({
 				chatId,
 				...(prev?.babyName ? { babyName: prev.babyName } : {}),
 				reportsEnabled: enabled,
+				status: prev?.status ?? "pending",
+				...(prev?.username ? { username: prev.username } : {}),
 			};
 			byChat.set(chatId, updated);
 			return R.success(updated);
 		},
 
-		listAll: async () => R.success([...byChat.values()]),
+		setStatus: async (chatId, status) => {
+			const prev = byChat.get(chatId);
+			// Mirror pg's UPDATE-with-no-row: setting status on an unknown chat is an
+			// error, not a silent create (approve/ban only act on existing rows).
+			if (!prev) return R.error(new Error(`setStatus: no chat ${chatId}`));
+			const updated: ChatConfig = {
+				chatId,
+				...(prev?.babyName ? { babyName: prev.babyName } : {}),
+				reportsEnabled: prev?.reportsEnabled ?? true,
+				status,
+				...(prev?.username ? { username: prev.username } : {}),
+			};
+			byChat.set(chatId, updated);
+			return R.success(updated);
+		},
+
+		listAll: async () =>
+			R.success([...byChat.values()].filter((c) => c.status === "approved")),
 	};
 };

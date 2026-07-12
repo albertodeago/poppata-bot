@@ -12,8 +12,7 @@ const env = {
 		webhookSecret: "whs",
 		miniAppUrl: "https://t.me/Bot/app",
 		guideUrl: "https://ex.com/guida.html",
-		maxChats: 5,
-		repoIssuesUrl: "https://github.com/x/y/issues",
+		adminChatId: -999,
 	},
 	logger: {
 		info: vi.fn(),

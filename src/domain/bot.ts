@@ -52,6 +52,12 @@ export interface BotEnv {
 		): Promise<void>;
 		answerCallback(callbackId: string, text?: string): Promise<void>;
 		clearKeyboard(chatId: number, messageId: number): Promise<void>;
+		/** Notify the admin of an access request, with approve/ban buttons. */
+		sendAccessRequest(
+			adminChatId: number,
+			text: string,
+			targetChatId: number,
+		): Promise<void>;
 		sendLinkButton(
 			chatId: number,
 			text: string,

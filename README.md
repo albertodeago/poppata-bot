@@ -12,9 +12,9 @@ and weekly reports.
   **Vercel** serverless functions, **Google Gemini** as a fallback parser,
   **luxon** for Europe/Rome time. Tests with **Vitest**, lint/format with **Biome**.
 
-One baby per chat. Chats **register themselves** with `/start` (or by adding the
-bot to a group) — no env allow-list. A single deployment serves up to `MAX_CHATS`
-(default 5) chats; beyond that, new chats get a prefilled "request access" link.
+One baby per chat. A chat **requests access** with `/start` (or by adding the bot
+to a group); the request lands in the admin chat (`ADMIN_CHAT_ID`), and the owner
+**approves or bans** it with one tap. The bot serves only approved chats.
 
 ---
 
@@ -54,7 +54,7 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 
 | Command | Use it for |
 |---|---|
-| `/start [nome]` | register or greet the chat; optionally set the baby name at once |
+| `/start [nome]` | request access / greet the chat; optionally set the baby name at once |
 | `/nome [nome]` | show the current baby name, or set/replace it |
 | `/stato` | show the current open feed or sleep session |
 | `/oggi` | show today's stats so far |
@@ -70,20 +70,28 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 
 The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
 
-### Chat registration
+### Chat access (request → approve)
 
-The bot serves a chat only after it has a config row. A chat gets one by:
+The bot serves a chat only when its config row is **`approved`**. A chat asks for
+access by:
 
-- being **added to a group** — the bot auto-registers and posts a welcome, or
+- being **added to a group** — the bot posts "richiesta inviata", or
 - someone running **`/start`** (optionally `/start Mario` to set the name at once).
 
-Until then, the bot ignores everything except `/start` and `/help` (no parsing, no
-Gemini). Set/replace the name anytime with **`/nome Mario`**; bare **`/nome`** shows
-the current one. The name is optional — reports just omit it when unset.
+Either way a `pending` row is created and a request — with the chat id, title, and
+requester `@handle` — is sent to the **admin chat** (`ADMIN_CHAT_ID`). The owner
+taps **✅ Approva** / **🚫 Banna** (or replies `/approva <chatId>` / `/banna <chatId>`).
+Approved chats are welcomed; banned chats are dropped silently. A pending chat that
+retries `/start` re-notifies you (so a missed request self-heals). Until approved,
+the bot ignores everything except `/start` and `/help` (no parsing, no Gemini).
 
-When the deployment is already serving `MAX_CHATS` chats, a new chat's `/start`
-replies with a **prefilled GitHub-issue link** (carrying the chat id) so the owner
-can enable it manually with `npm run enable-chat -- <chatId> [nome]`.
+Approve/ban is honoured from `ADMIN_CHAT_ID` and nowhere else — it checks the chat,
+not the clicker, so **anyone in that chat can approve/ban**. Keep it private.
+
+Set/replace the name anytime with **`/nome Mario`**; bare **`/nome`** shows the
+current one. The name is optional — reports just omit it when unset. The admin chat
+itself always bypasses the gate. As a CLI fallback you can approve a chat directly
+with `npm run enable-chat -- <chatId> [nome]`.
 
 ### Reports
 
@@ -119,7 +127,7 @@ npm run dev:local
 Then type messages, one per line:
 
 ```
-/start Mario               # → register this chat; set the baby name
+/start Mario               # → request access for this chat; set the baby name
 /nome Gigi                 # → change the name; "/nome" shows the current one
 inizio poppata dx 9.15     # → 👍 reaction
 fine 9.40                  # → "durata poppata: 25m"
@@ -150,7 +158,7 @@ The console parser is **rules-only** (no Gemini locally), which the design allow
 | `npm run lint` / `lint:apply` | Biome check / check-and-write |
 | `npm run build` | `tsc` compile to `dist/` (sanity; Vercel builds functions itself) |
 | `npm run migrate:up` / `migrate:down` | apply / roll back DB migrations |
-| `npm run enable-chat -- <chatId> [nome]` | register a chat manually (bypasses the cap; needs `DATABASE_URL`) |
+| `npm run enable-chat -- <chatId> [nome]` | approve a chat manually from the CLI (needs `DATABASE_URL`) |
 
 ---
 
@@ -164,7 +172,7 @@ and two generated secrets.
 1. Message **[@BotFather](https://t.me/BotFather)** → `/newbot` → pick a name and username → copy the token → this is **`BOT_TOKEN`**.
 2. **Turn off privacy mode** (critical — otherwise the bot only receives `/commands`, not free text like `inizio poppata 9.15`):
    `@BotFather` → `/setprivacy` → pick your bot → **Disable**.
-3. Create a Telegram **group** (use a private test group first), and **add the bot to it**. If you changed privacy mode after adding it, **remove and re-add** the bot so the change takes effect — or make the bot a **group admin** (admins see all messages regardless). No chat id to configure: adding the bot (or `/start`) registers the chat itself.
+3. Create a Telegram **group** (use a private test group first), and **add the bot to it**. If you changed privacy mode after adding it, **remove and re-add** the bot so the change takes effect — or make the bot a **group admin** (admins see all messages regardless). Adding the bot (or `/start`) sends an access request to `ADMIN_CHAT_ID`; approve it to activate the chat.
 
 ### 2. Supabase database
 
@@ -207,9 +215,8 @@ openssl rand -hex 32   # → WEBHOOK_SECRET   (Telegram allows A–Z a–z 0–9
 | `CRON_SECRET` | ✅ | bearer that guards the report cron |
 | `WEBHOOK_SECRET` | ✅ | secret token Telegram echoes back on every webhook call (verified server-side) |
 | `WEBHOOK_URL` | ✅ | deployment base URL, e.g. `https://poppata-bot.vercel.app` |
+| `ADMIN_CHAT_ID` | ✅ | chat where access requests land and the owner approves/bans (negative for a group) |
 | `GEMINI_MODEL` | — | defaults to `gemini-2.0-flash` |
-| `MAX_CHATS` | — | max chats that may self-register (default `5`) |
-| `REPO_ISSUES_URL` | — | base repo issues URL for the "bot full" request-access link (default `https://github.com/albertodeago/poppata-bot/issues`) |
 
 `.env.sample` lists them for local use. Chats are configured **at runtime** (`/start`, `/nome`), not via env. **Timezone (`Europe/Rome`) is a code constant, not an env var.**
 
@@ -247,8 +254,8 @@ curl -H "Authorization: Bearer <CRON_SECRET>" "https://<your-app>.vercel.app/api
 ## Troubleshooting
 
 - **Bot doesn't react to free text (but `/commands` work):** privacy mode is still on. `@BotFather → /setprivacy → Disable`, then remove & re-add the bot to the group (or make it admin).
-- **Bot does nothing at all, no error:** the chat isn't registered — send `/start` (or re-add the bot). Unregistered chats are silently dropped. If it's a fresh add that got no welcome, `my_chat_member` isn't in the webhook's `allowed_updates`: re-run `/api/setup`.
-- **`/start` says the bot is full:** the deployment is at `MAX_CHATS`. Raise it, or run `npm run enable-chat -- <chatId> [nome]` for that chat.
+- **Bot does nothing at all, no error:** the chat isn't approved yet — send `/start`, then approve the request in the admin chat (or run `npm run enable-chat -- <chatId>`). Non-approved chats are silently dropped. If a fresh add got no "richiesta inviata", `my_chat_member` isn't in the webhook's `allowed_updates`: re-run `/api/setup`.
+- **Access requests never arrive:** check `ADMIN_CHAT_ID` is set to the right chat and the bot can post there (send it a message once).
 - **`/api/setup` or messages return 500:** open **Vercel → deployment → Logs**. Common causes: an env var missing (`… is not set`) or set without a redeploy; a `pg` connection error (wrong `DATABASE_URL`, or migrations not run).
 - **Webhook shows a 401 in `getWebhookInfo`:** `WEBHOOK_SECRET` in Vercel differs from what `/api/setup` registered — fix it and re-run `/api/setup`. Check with:
   ```bash
@@ -277,7 +284,7 @@ src/
     memory/* console/* noop/*   (used by dev:local + tests)
   config.ts env.ts dev.ts
 migrations/               node-pg-migrate migration(s)
-scripts/enable-chat.ts    manually register a chat (bypasses the cap)
+scripts/enable-chat.ts    approve a chat manually from the CLI
 test/unit/                Vitest suites (domain + adapters + api guards)
 docs/superpowers/         design spec + implementation plans
 ```
