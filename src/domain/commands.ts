@@ -1,6 +1,7 @@
 import type { BotEnv } from "./bot.js";
 import type { ChatConfigEnv, ChatLanguage } from "./chatConfig.js";
 import type { EventEnv } from "./event.js";
+import { guideUrlForLanguage } from "./guide.js";
 import { chatLanguage, eventLabel, internalError } from "./i18n.js";
 import { answerLastFeed } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
@@ -429,6 +430,6 @@ export const guidaCommand =
 			chatId,
 			language === "it" ? GUIDA_TEXT : GUIDE_TEXT_EN,
 			language === "it" ? GUIDA_BUTTON : GUIDE_BUTTON_EN,
-			guideUrl,
+			guideUrlForLanguage(guideUrl, language),
 		);
 	};

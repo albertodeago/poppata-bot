@@ -115,6 +115,15 @@ describe("[REGISTRATION] registerChat", () => {
 		expect(lastMessage(mocks)).toContain("Leo");
 	});
 
+	it("links English approved chats to the English guide", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success(chatConfig({ language: "en", babyName: "Leo" })),
+		);
+		await registerChat({ chatId: 1, ...base })(env);
+		expect(lastMessage(mocks)).toContain('href="https://ex.com/guide.html"');
+	});
+
 	it("updates the name when /start carries one on an approved chat", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.get.mockResolvedValue(

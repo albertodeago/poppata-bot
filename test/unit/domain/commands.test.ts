@@ -471,6 +471,26 @@ describe("[COMMANDS] guidaCommand", () => {
 		);
 	});
 
+	it("sends English chats to the English guide page", async () => {
+		const { mocks, env } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({
+				chatId: -100999,
+				language: "en",
+				reportsEnabled: true,
+				status: "approved",
+			}),
+		);
+		mocks.bot.sendLinkButton.mockResolvedValue();
+		await guidaCommand(-100999, "https://ex.com/guida.html")(env);
+		expect(mocks.bot.sendLinkButton).toHaveBeenCalledWith(
+			-100999,
+			expect.any(String),
+			expect.any(String),
+			"https://ex.com/guide.html",
+		);
+	});
+
 	it("HELP_TEXT documents the /guida command", () => {
 		expect(HELP_TEXT).toContain("/guida");
 	});

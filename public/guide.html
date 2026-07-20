@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>poppata-bot · Guida</title>
+<title>poppata-bot · Guide</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root{
@@ -183,7 +183,7 @@
 </head>
 <body>
   <main class="phone" id="phone">
-    <div class="close" id="close" aria-label="Chiudi">✕</div>
+    <div class="close" id="close" aria-label="Close">✕</div>
     <div class="bars" id="bars"></div>
     <header>
       <span class="kicker" id="kicker">—</span>
@@ -213,133 +213,133 @@
 
   // Each turn: {who:'u'|'b', text, react?, buttons?, tail?}
   var CARDS = [
-    { topic:"intro", kicker:"Benvenuto/a", title:"poppata-bot",
+    { topic:"intro", kicker:"Welcome", title:"poppata-bot",
       chat:[
-        {who:"b", text:"Ciao! 👋 Tengo il diario del tuo bimbo/a: poppate, nanne, pipì, cacca e peso."},
-        {who:"b", text:"Scrivimi come parli, in italiano. Ci penso io."}
+        {who:"b", text:"Hi! 👋 I keep your baby's diary: feeds, sleep, pee, poop, and weight."},
+        {who:"b", text:"Write naturally in English. I'll take care of the rest."}
       ],
-      note:"Un bimbo/a per chat. Nella guida vedi tutto quello che so fare — <b>tocca a destra</b> per andare avanti." },
+      note:"One baby per chat. This guide shows everything I can do — <b>tap right</b> to continue." },
 
-    { topic:"start", kicker:"Per iniziare", title:"Attiva il bot",
+    { topic:"start", kicker:"First step", title:"Activate the bot",
       chat:[
         {who:"u", text:"/start Mario"},
-        {who:"b", text:"Ciao! 👋 Bot attivato in questa chat.\n👶 Nome: Mario"}
+        {who:"b", text:"Hi! 👋 Bot activated in this chat.\n👶 Name: Mario"}
       ],
-      note:"Oppure <b>aggiungimi a un gruppo</b>: mi attivo da solo. Cambi il nome quando vuoi con <b>/nome Mario</b>." },
+      note:"Or <b>add me to a group</b>: I activate myself. Change the name whenever you want with <b>/name Mario</b>." },
 
-    { topic:"approval", kicker:"Accesso", title:"Attendi l'ok",
+    { topic:"approval", kicker:"Access", title:"Wait for approval",
       chat:[
         {who:"u", text:"/start"},
-        {who:"b", text:"📨 Richiesta di accesso inviata! Attendi l'approvazione dell'amministratore."},
-        {who:"divider", text:"L'admin riceve una richiesta 👇"},
-        {who:"b", text:"📨 Nuova richiesta di accesso\nFamiglia Rossi (-100123)\nda Alberto", buttons:["Approva","Blocca"]}
+        {who:"b", text:"📨 Access request sent! Wait for the administrator to approve it."},
+        {who:"divider", text:"The admin receives a request 👇"},
+        {who:"b", text:"📨 New access request\nRossi family (-100123)\nfrom Alberto", buttons:["Approve","Block"]}
       ],
-      note:"Alla prima attivazione creo una <b>richiesta per l'admin</b>. Quando approva la chat, usa di nuovo <b>/start</b> e il bot è pronto." },
+      note:"On first activation I create an <b>admin approval request</b>. Once the admin approves the chat, use <b>/start</b> again and the bot is ready." },
 
-    { topic:"feed", kicker:"Poppata al seno", title:"Logga una poppata",
+    { topic:"feed", kicker:"Breastfeed", title:"Log a feed",
       chat:[
-        {who:"u", text:"poppata dx 9.15", react:"👍"},
-        {who:"divider", text:"Oppure, in modo interattivo 👇"},
-        {who:"u", text:"poppata"},
-        {who:"b", text:"Per quale seno? 🤱", buttons:["Sinistro","Destro"]},
-        {who:"b", text:"Poppata iniziata alle 10:32 — seno destro"}
+        {who:"u", text:"feed right 9.15", react:"👍"},
+        {who:"divider", text:"Or interactively 👇"},
+        {who:"u", text:"feed"},
+        {who:"b", text:"Which breast? 🤱", buttons:["Left","Right"]},
+        {who:"b", text:"Feed started at 10:32 — right breast"}
       ],
-      note:"Lato + ora esatta → <b>reazione 👍</b> e basta. Se manca qualcosa te lo chiedo; senza ora, uso l'orario del messaggio." },
+      note:"Side + exact time → quiet <b>👍 reaction</b>. If something is missing, I ask; without a time, I use the message time." },
 
-    { topic:"bottle", kicker:"Biberon", title:"Latte artificiale",
+    { topic:"bottle", kicker:"Bottle", title:"Formula milk",
       chat:[
-        {who:"u", text:"biberon 100"},
-        {who:"b", text:"🥛 Biberon 100 ml alle 14:30 ✅"},
-        {who:"divider", text:"Oppure, in modo interattivo 👇"},
-        {who:"u", text:"bibe"},
-        {who:"b", text:"Quanti ml? 🥛"},
+        {who:"u", text:"bottle 100"},
+        {who:"b", text:"🥛 Bottle 100 ml at 14:30 ✅"},
+        {who:"divider", text:"Or interactively 👇"},
+        {who:"u", text:"bottle"},
+        {who:"b", text:"How many ml? 🥛"},
         {who:"u", text:"120"},
-        {who:"b", text:"🥛 Biberon 120 ml alle 16:05 ✅"}
+        {who:"b", text:"🥛 Bottle 120 ml at 16:05 ✅"}
       ],
-      note:"Il biberon si misura in <b>ml</b> e non ha un lato — per questo è diverso dalla poppata. Scrivi <b>bibe</b> e ti chiedo la quantità." },
+      note:"Bottles are measured in <b>ml</b> and have no side — that's why they differ from breastfeeds. Write <b>bottle</b> and I ask for the amount." },
 
-    { topic:"fine", kicker:"Chiudere", title:"Fine sessione",
+    { topic:"fine", kicker:"Closing", title:"End a session",
       chat:[
-        {who:"u", text:"poppata dx 9.15", react:"👍"},
-        {who:"u", text:"fine 9.40"},
-        {who:"b", text:"Ok, aggiunta ✅ — durata poppata: 25m"},
-        {who:"divider", text:"Anche oltre la mezzanotte 👇"},
-        {who:"u", text:"nanna 22", react:"👍"},
-        {who:"u", text:"fine 6.30"},
-        {who:"b", text:"Ok, aggiunta ✅ — durata nanna: 8h 30m"}
+        {who:"u", text:"feed right 9.15", react:"👍"},
+        {who:"u", text:"end 9.40"},
+        {who:"b", text:"Ok, added ✅ — feed duration: 25m"},
+        {who:"divider", text:"Even across midnight 👇"},
+        {who:"u", text:"sleep 22", react:"👍"},
+        {who:"u", text:"end 6.30"},
+        {who:"b", text:"Ok, added ✅ — sleep duration: 8h 30m"}
       ],
-      note:"<b>fine</b> (o <b>fine 9.40</b>) chiude la poppata o la nanna aperta e calcola la durata. Gestisce anche oltre la mezzanotte (nanna 22 → fine 6.30)." },
+      note:"<b>end</b> (or <b>end 9.40</b>) closes the open feed or sleep session and calculates the duration. It also works across midnight (sleep 22 → end 6.30)." },
 
-    { topic:"sleep", kicker:"Nanna", title:"Nanna e conflitti",
+    { topic:"sleep", kicker:"Sleep", title:"Sleep and conflicts",
       chat:[
-        {who:"u", text:"nanna 22"},
-        {who:"b", text:"Nanna iniziata alle 22:00"},
-        {who:"u", text:"poppata sx"},
-        {who:"b", text:"C'è già una nanna aperta dalle 22:00. Chiuderla alle 22:40 e iniziare poppata?", buttons:["Conferma","Annulla"]}
+        {who:"u", text:"sleep 22"},
+        {who:"b", text:"Sleep started at 22:00"},
+        {who:"u", text:"feed left"},
+        {who:"b", text:"There is already an open sleep session since 22:00. Close it at 22:40 and start a feed?", buttons:["Confirm","Cancel"]}
       ],
-      note:"Se inizi qualcosa mentre una sessione è già aperta, <b>chiedo conferma</b> prima di chiudere quella e iniziare l'altra. Vale in entrambi i sensi." },
+      note:"If you start something while a session is already open, <b>I ask for confirmation</b> before closing it and starting the new one. This works both ways." },
 
-    { topic:"diaper", kicker:"Pannolino", title:"Pipì e cacca",
+    { topic:"diaper", kicker:"Diaper", title:"Pee and poop",
       chat:[
-        {who:"u", text:"pipì", react:"👍"},
-        {who:"u", text:"cacca", react:"👍"}
+        {who:"u", text:"pee", react:"👍"},
+        {who:"u", text:"poop", react:"👍"}
       ],
-      note:"Eventi istantanei: una <b>reazione 👍</b> silenziosa e via. Capisco anche plin, pisciata, popò, pupù…" },
+      note:"Instant events: a quiet <b>👍 reaction</b> and done. I also understand wee, poo, poopoo, and similar words." },
 
-    { topic:"weight", kicker:"Peso", title:"Registra il peso",
+    { topic:"weight", kicker:"Weight", title:"Record weight",
       chat:[
-        {who:"u", text:"/peso 3400"},
-        {who:"b", text:"⚖️ Peso di oggi: 3400 g"},
-        {who:"u", text:"/peso"},
-        {who:"b", text:"📈 Storico peso:\n7/7  3400 g\n5/7  3320 g"}
+        {who:"u", text:"/weight 3400"},
+        {who:"b", text:"⚖️ Today's weight: 3400 g"},
+        {who:"u", text:"/weight"},
+        {who:"b", text:"📈 Weight history:\n7/7  3400 g\n5/7  3320 g"}
       ],
-      note:"Il peso si registra con <b>/peso</b> in grammi, non a testo libero. <b>/peso</b> da solo mostra lo storico." },
+      note:"Record weight with <b>/weight</b> in grams, not as free text. <b>/weight</b> on its own shows the history." },
 
-    { topic:"report", kicker:"Report automatici", title:"Ogni mattina",
+    { topic:"report", kicker:"Automatic reports", title:"Every morning",
       chat:[
-        {who:"b", text:"📊 Ieri — Mario\n😴 Sonno: 14h 20m\n🍼 Poppate: 3h 05m (7 — dx 4, sx 3)\n🥛 Biberon: 100 ml (1)\n💧 Pipì: 6\n💩 Cacca: 2"},
+        {who:"b", text:"📊 Yesterday — Mario\n😴 Sleep: 14h 20m\n🍼 Feeds: 3h 05m (7 — right 4, left 3)\n🥛 Bottle: 100 ml (1)\n💧 Pee: 6\n💩 Poop: 2"},
         {who:"u", text:"/report off"},
-        {who:"b", text:"🔕 Report automatici disattivati."}
+        {who:"b", text:"🔕 Automatic reports disabled."}
       ],
-      note:"Ogni mattina ricevi il riassunto di ieri (e quello settimanale). Spegni/riaccendi con <b>/report off</b> · <b>/report on</b>." },
+      note:"Every morning you receive yesterday's summary (and the weekly one). Turn reports off/on with <b>/report off</b> · <b>/report on</b>." },
 
-    { topic:"charts", kicker:"Statistiche", title:"/grafici",
+    { topic:"charts", kicker:"Statistics", title:"/charts",
       chat:[
-        {who:"u", text:"/grafici"},
-        {who:"b", text:"📊 Apri le statistiche del bambino", buttons:["📊 Apri statistiche"]}
+        {who:"u", text:"/charts"},
+        {who:"b", text:"📊 Open the baby's statistics", buttons:["📊 Open stats"]}
       ],
-      note:"<b>/grafici</b> apre la mini app con i grafici di poppate, nanne, pipì, cacca e peso." },
+      note:"<b>/charts</b> opens the mini app with charts for feeds, sleep, pee, poop, and weight." },
 
-    { topic:"proposal", kicker:"Idee e problemi", title:"Proponi",
+    { topic:"proposal", kicker:"Ideas and issues", title:"Suggest",
       chat:[
-        {who:"u", text:"/proponi Sarebbe utile segnare una poppata dimenticata"},
-        {who:"b", text:"Grazie, proposta inviata."}
+        {who:"u", text:"/suggest It would be useful to add a forgotten feed"},
+        {who:"b", text:"Thanks, feedback sent."}
       ],
-      note:"Usa <b>/proponi</b> per mandare un'idea, modifica o problema all'admin. Includo chat e mittente, così può ricontattarti se servono dettagli." },
+      note:"Use <b>/suggest</b> to send an idea, change, or problem to the admin. I include the chat and sender, so they can contact you if they need details." },
 
-    { topic:"undo", kicker:"Ops, sbagliato", title:"Annulla",
+    { topic:"undo", kicker:"Oops, wrong", title:"Undo",
       chat:[
-        {who:"u", text:"pipì", react:"👍"},
-        {who:"u", text:"cacca", react:"👍"},
-        {who:"u", text:"annulla"},
-        {who:"b", text:"Rimosso: cacca delle 10:05"},
-        {who:"u", text:"annulla"},
-        {who:"b", text:"Rimosso: pipì delle 10:00"}
+        {who:"u", text:"pee", react:"👍"},
+        {who:"u", text:"poop", react:"👍"},
+        {who:"u", text:"undo"},
+        {who:"b", text:"Removed: poop at 10:05"},
+        {who:"u", text:"undo"},
+        {who:"b", text:"Removed: pee at 10:00"}
       ],
-      note:"<b>annulla</b> (o <b>/annulla</b>) cancella <b>solo l'ultimo</b> evento salvato. Ripeti per tornare ancora più indietro, uno alla volta." },
+      note:"<b>undo</b> (or <b>/undo</b>) deletes <b>only the latest</b> saved event. Repeat to go further back, one event at a time." },
 
-    { topic:"tips", kicker:"Buono a sapersi", title:"Trucchi & comandi",
+    { topic:"tips", kicker:"Good to know", title:"Tips & commands",
       chat:[
-        {who:"u", text:"/stato"},
-        {who:"b", text:"Poppata in corso da 16:20 (12m)"},
-        {who:"u", text:"/oggi"},
-        {who:"b", text:"📊 Oggi\n😴 Sonno: 5h 40m\n🍼 Poppate: 1h 15m (4 — dx 2, sx 2)\n🥛 Biberon: 120 ml (1)\n💧 Pipì: 4\n💩 Cacca: 1"},
-        {who:"u", text:"/seno"},
-        {who:"b", text:"Ultima poppata: seno destro — finita alle 09:40 (2h 15m fa)"},
-        {who:"u", text:"/scaletta"},
-        {who:"b", text:"📋 Scaletta di oggi — 8/7\n\n06:30 🍼 dx 06:30→06:55 (25m)\n08:00 💧 pipì\n13:00 😴 13:00→14:15 (1h 15m)\n16:00 🥛 biberon 120 ml\n\nTotali: 🍼 1 · 🥛 120 ml · 😴 1h 15m · 💧 1 · 💩 0"}
+        {who:"u", text:"/status"},
+        {who:"b", text:"Feed in progress since 16:20 (12m)"},
+        {who:"u", text:"/today"},
+        {who:"b", text:"📊 Today\n😴 Sleep: 5h 40m\n🍼 Feeds: 1h 15m (4 — right 2, left 2)\n🥛 Bottle: 120 ml (1)\n💧 Pee: 4\n💩 Poop: 1"},
+        {who:"u", text:"/breast"},
+        {who:"b", text:"Last feed: right breast — ended at 09:40 (2h 15m ago)"},
+        {who:"u", text:"/schedule"},
+        {who:"b", text:"📋 Today's schedule — 8/7\n\n06:30 🍼 right 06:30→06:55 (25m)\n08:00 💧 pee\n13:00 😴 13:00→14:15 (1h 15m)\n16:00 🥛 bottle 120 ml\n\nTotals: 🍼 1 · 🥛 120 ml · 😴 1h 15m · 💧 1 · 💩 0"}
       ],
-      note:"Orari <b>“nudi”</b> → scelgo l'a.m./p.m. più vicino all'ora del messaggio." }
+      note:"Bare times → I choose the a.m./p.m. closest to the message time." }
   ];
 
   // timing (ms)

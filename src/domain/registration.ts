@@ -1,6 +1,7 @@
 import type { BotEnv } from "./bot.js";
 import type { ChatConfigEnv, ChatLanguage } from "./chatConfig.js";
 import { helpText } from "./commands.js";
+import { guideUrlForLanguage } from "./guide.js";
 import {
 	internalError,
 	languageSet,
@@ -93,7 +94,7 @@ const welcomeMessage = (
 		language === "it"
 			? "Guida visuale: come usare il bot"
 			: "Visual guide: how to use the bot";
-	return `${t.welcome}\n${nameLine}\n\n${helpText(language)}\n\n📖 <a href="${guideUrl}">${guideText}</a>`;
+	return `${t.welcome}\n${nameLine}\n\n${helpText(language)}\n\n📖 <a href="${guideUrlForLanguage(guideUrl, language)}">${guideText}</a>`;
 };
 
 export interface RegisterInput {
