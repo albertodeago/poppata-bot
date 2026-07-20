@@ -20,9 +20,13 @@ to a group); the request lands in the admin chat (`ADMIN_CHAT_ID`), and the owne
 
 ## Roadmap
 
-- [x] mini app telegram that shows graphs / stats
 - [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
   - might solve also the single command like `nanna 12.00 12.30` (to add it directly)
+- [ ] Command to "propose a change / new feature" - request arrives to admin chat, must receive the "text / explanation" of the proposal and possibly who's the request so I can reach out to ask further questions.
+- [ ] lingua inglese? come gestiamo i comandi? (come fanno gli altri bot multilingua?)
+- [ ] Check Vercel and supabase logs
+- [ ] Cron or something that builds a dashboard that I can see usage (how much and from who) (and errors maybe?)
+  - [ ] Should I just connect it to Sentry?
 
 ## What it understands
 
