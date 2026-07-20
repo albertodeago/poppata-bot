@@ -14,6 +14,7 @@ export const COMMANDS = [
 	{ command: "nome", description: "Imposta il nome del bimbo/a" },
 	{ command: "lingua", description: "Cambia lingua del bot" },
 	{ command: "report", description: "Report automatici on/off" },
+	{ command: "proponi", description: "Invia un'idea o un problema" },
 	{ command: "guida", description: "Guida visuale al bot" },
 	{ command: "help", description: "Aiuto" },
 ];
@@ -31,6 +32,7 @@ export const ENGLISH_COMMANDS = [
 	{ command: "name", description: "Set the baby's name" },
 	{ command: "language", description: "Change bot language" },
 	{ command: "report", description: "Automatic reports on/off" },
+	{ command: "suggest", description: "Send an idea or problem" },
 	{ command: "guide", description: "Visual guide to the bot" },
 	{ command: "help", description: "Help" },
 ];

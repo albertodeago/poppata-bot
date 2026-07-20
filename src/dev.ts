@@ -21,6 +21,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	proposalCommand,
 	scalettaCommand,
 	sendDailyReport,
 	sendWeeklyReport,
@@ -212,6 +213,26 @@ const handleLine = async (line: string): Promise<void> => {
 		const command = trimmed.startsWith("/language") ? "/language" : "/lingua";
 		const arg = trimmed.slice(command.length).trim();
 		await languageCommand(DEV_CHAT_ID, arg)(env);
+		return;
+	}
+
+	if (
+		trimmed === "/proponi" ||
+		trimmed.startsWith("/proponi ") ||
+		trimmed === "/suggest" ||
+		trimmed.startsWith("/suggest ")
+	) {
+		const command = trimmed.startsWith("/suggest") ? "/suggest" : "/proponi";
+		const arg = trimmed.slice(command.length).trim();
+		await proposalCommand({
+			chatId: DEV_CHAT_ID,
+			chatTitle: "dev:local",
+			userId: DEV_USER_ID,
+			userName: "papà",
+			text: arg,
+			adminChatId: DEV_ADMIN_CHAT_ID,
+			now: new Date(),
+		})(env);
 		return;
 	}
 

@@ -8,6 +8,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	proposalCommand,
 	scalettaCommand,
 	sendDailyReport,
 	sendWeeklyReport,
@@ -101,6 +102,54 @@ describe("[COMMANDS] /help", () => {
 
 	it("documents bottle feeding", () => {
 		expect(HELP_TEXT.toLowerCase()).toContain("biberon");
+	});
+});
+
+describe("[COMMANDS] /proponi", () => {
+	it("forwards a proposal to the admin chat with requester context", async () => {
+		const { env, mocks } = makeTestEnv();
+		await proposalCommand({
+			chatId: 1,
+			chatTitle: "Fam <Rossi>",
+			userId: 42,
+			userName: "Papà & Mamma",
+			username: "alberto",
+			text: "Vorrei <grafici> migliori",
+			adminChatId: 999,
+			now: new Date("2026-07-20T12:35:00Z"),
+		})(env);
+
+		expect(mocks.bot.sendMessage).toHaveBeenNthCalledWith(
+			1,
+			999,
+			expect.stringContaining("Fam &lt;Rossi&gt; (1)"),
+			{ parseMode: "HTML" },
+		);
+		const adminText = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(adminText).toContain("Papà &amp; Mamma (@alberto), user 42");
+		expect(adminText).toContain("Vorrei &lt;grafici&gt; migliori");
+		expect(mocks.bot.sendMessage).toHaveBeenNthCalledWith(
+			2,
+			1,
+			"Grazie, proposta inviata.",
+		);
+	});
+
+	it("shows usage when the proposal text is missing", async () => {
+		const { env, mocks } = makeTestEnv();
+		await proposalCommand({
+			chatId: 1,
+			userId: 42,
+			userName: "Papà",
+			text: "   ",
+			adminChatId: 999,
+			now: new Date(),
+		})(env);
+
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"Scrivi /proponi seguito da un'idea, modifica o problema.",
+		);
 	});
 });
 

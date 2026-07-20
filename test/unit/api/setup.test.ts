@@ -22,6 +22,11 @@ describe("[SETUP] command list", () => {
 		expect(COMMANDS.some((c) => c.command === "report")).toBe(true);
 	});
 
+	it("COMMANDS includes proposal commands", () => {
+		expect(COMMANDS.some((c) => c.command === "proponi")).toBe(true);
+		expect(ENGLISH_COMMANDS.some((c) => c.command === "suggest")).toBe(true);
+	});
+
 	it("ENGLISH_COMMANDS includes English aliases", () => {
 		expect(ENGLISH_COMMANDS.some((c) => c.command === "charts")).toBe(true);
 		expect(ENGLISH_COMMANDS.some((c) => c.command === "weight")).toBe(true);

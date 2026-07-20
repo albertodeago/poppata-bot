@@ -26,7 +26,6 @@ or `/language it|en`.
 
 - [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
   - might solve also the single command like `nanna 12.00 12.30` (to add it directly)
-- [ ] Command to "propose a change / new feature" - request arrives to admin chat, must receive the "text / explanation" of the proposal and possibly who's the request so I can reach out to ask further questions.
 - [ ] Check Vercel and supabase logs
 - [ ] Cron or something that builds a dashboard that I can see usage (how much and from who) (and errors maybe?)
   - [ ] Should I just connect it to Sentry?
@@ -81,10 +80,11 @@ Free-text messages can be Italian or English; Gemini is a best-effort fallback f
 | `/grafici` | apri la mini app con grafici e statistiche |
 | `/lingua it\|en` | change the bot reply language for this chat |
 | `/report on\|off` | turn the scheduled reports (daily + weekly) on/off for this chat; default is on |
+| `/proponi [testo]` | send an idea, change, or problem to the admin chat |
 | `/guida` | open the visual guide |
 | `/help` | show the in-chat help |
 
-Telegram command menus are localized with the Bot API: Italian clients see the commands above, English clients see `/name`, `/status`, `/today`, `/yesterday`, `/week`, `/schedule`, `/undo`, `/breast`, `/weight`, `/charts`, `/language`, `/guide`, `/report`, and `/help`. Both Italian commands and English aliases work in any chat.
+Telegram command menus are localized with the Bot API: Italian clients see the commands above, English clients see `/name`, `/status`, `/today`, `/yesterday`, `/week`, `/schedule`, `/undo`, `/breast`, `/weight`, `/charts`, `/language`, `/guide`, `/report`, `/suggest`, and `/help`. Both Italian commands and English aliases work in any chat.
 
 The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
 
@@ -156,6 +156,7 @@ inizio poppata dx 9.15     # → 👍 reaction
 fine 9.40                  # → "durata poppata: 25m"
 /stato                     # → run a command
 /peso 3400                 # → registra il peso di oggi; "/peso" mostra lo storico
+/proponi idea              # → invia un'idea/modifica/problema all'admin chat
 pipì                       # → 👍
 conf                       # → press the last [Conferma] button
 ann                        # → press the last [Annulla] button
@@ -164,7 +165,7 @@ eat / sleep                # → tap the [Poppata] / [Nanna] type button
 @mamma nanna 22            # → override the sender name
 !23:50 fine                # → override the message arrival time
 /oggi  /ieri  /settimana  /scaletta  /annulla  /help
-/today /yesterday /week /schedule /undo /status /language
+/today /yesterday /week /schedule /undo /status /language /suggest idea
 /report  /report-week      # → fire the daily/weekly report locally
 ```
 

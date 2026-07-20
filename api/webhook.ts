@@ -15,6 +15,7 @@ import {
 	ieriCommand,
 	oggiCommand,
 	pesoCommand,
+	proposalCommand,
 	scalettaCommand,
 	senoCommand,
 	settimanaCommand,
@@ -146,6 +147,23 @@ const initBot = (): void => {
 	bot.command("report", async (ctx) => {
 		const arg = ctx.message.text.replace(/^\/report(@\S+)?\s*/, "");
 		await reportCommand(ctx.chat.id, arg)(env);
+	});
+	bot.command(["proponi", "suggest"], async (ctx) => {
+		const arg = ctx.message.text.replace(
+			/^\/(?:proponi|suggest)(@\S+)?\s*/,
+			"",
+		);
+		const chatTitle = "title" in ctx.chat ? ctx.chat.title : undefined;
+		await proposalCommand({
+			chatId: ctx.chat.id,
+			...(chatTitle ? { chatTitle } : {}),
+			userId: ctx.from.id,
+			userName: senderName(ctx.from),
+			...(ctx.from.username ? { username: ctx.from.username } : {}),
+			text: arg,
+			adminChatId: env.config.adminChatId,
+			now: new Date(),
+		})(env);
 	});
 	bot.command("help", async (ctx) => {
 		await helpCommand(ctx.chat.id)(env);

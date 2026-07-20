@@ -48,6 +48,7 @@ const HELP_TEXT_IT = [
 	"/nome Mario — imposta il nome del bimbo/a",
 	"/lingua it|en — cambia lingua del bot",
 	"/report on|off — attiva/disattiva i report automatici",
+	"/proponi testo — invia idea, modifica o problema",
 	"/guida — guida visuale al bot",
 	"/help — questo messaggio",
 ].join("\n");
@@ -72,9 +73,56 @@ const HELP_TEXT_EN = [
 	"/name Mario — set the baby name",
 	"/language it|en — change bot language",
 	"/report on|off — enable/disable automatic reports",
+	"/suggest text — send an idea, change, or problem",
 	"/guide — visual guide to the bot",
 	"/help — this message",
 ].join("\n");
+
+const PROPOSAL_MAX_LENGTH = 2000;
+const PROPOSAL_USAGE =
+	"Scrivi /proponi seguito da un'idea, modifica o problema.";
+const PROPOSAL_USAGE_EN =
+	"Write /suggest followed by an idea, change, or problem.";
+const PROPOSAL_SENT = "Grazie, proposta inviata.";
+const PROPOSAL_SENT_EN = "Thanks, feedback sent.";
+const PROPOSAL_TOO_LONG =
+	"Proposta troppo lunga: tienila entro 2000 caratteri.";
+const PROPOSAL_TOO_LONG_EN =
+	"Feedback too long: keep it within 2000 characters.";
+const PROPOSAL_SEND_FAILED =
+	"Non sono riuscito a inviare la proposta, riprova.";
+const PROPOSAL_SEND_FAILED_EN = "I could not send the feedback, try again.";
+
+const escapeHtml = (s: string): string =>
+	s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export interface ProposalInput {
+	chatId: number;
+	chatTitle?: string;
+	userId: number;
+	userName: string;
+	username?: string;
+	text: string;
+	adminChatId: number;
+	now: Date;
+}
+
+const adminProposalText = (input: ProposalInput, text: string): string => {
+	const where = input.chatTitle
+		? `${escapeHtml(input.chatTitle)} (${input.chatId})`
+		: `chat ${input.chatId}`;
+	const handle = input.username ? ` (@${escapeHtml(input.username)})` : "";
+	const when = romeNow(input.now).toFormat("dd/LL/yyyy HH:mm");
+	return [
+		"💡 <b>Nuova proposta</b>",
+		"",
+		`<b>Chat:</b> ${where}`,
+		`<b>Da:</b> ${escapeHtml(input.userName)}${handle}, user ${input.userId}`,
+		`<b>Ora:</b> ${when}`,
+		"",
+		escapeHtml(text),
+	].join("\n");
+};
 
 export const helpText = (language: ChatLanguage): string =>
 	language === "it" ? HELP_TEXT_IT : HELP_TEXT_EN;
@@ -220,6 +268,48 @@ export const helpCommand =
 		await env.bot.sendMessage(chatId, helpText(language), {
 			parseMode: "HTML",
 		});
+	};
+
+export const proposalCommand =
+	(input: ProposalInput) =>
+	async (env: BotEnv & ChatConfigEnv & LoggerEnv): Promise<void> => {
+		const language = await chatLanguage(env, input.chatId);
+		const text = input.text.trim();
+		if (text === "") {
+			await env.bot.sendMessage(
+				input.chatId,
+				language === "it" ? PROPOSAL_USAGE : PROPOSAL_USAGE_EN,
+			);
+			return;
+		}
+
+		if (text.length > PROPOSAL_MAX_LENGTH) {
+			await env.bot.sendMessage(
+				input.chatId,
+				language === "it" ? PROPOSAL_TOO_LONG : PROPOSAL_TOO_LONG_EN,
+			);
+			return;
+		}
+
+		try {
+			await env.bot.sendMessage(
+				input.adminChatId,
+				adminProposalText(input, text),
+				{ parseMode: "HTML" },
+			);
+		} catch (e) {
+			env.logger.error("proposal: send admin message failed", e);
+			await env.bot.sendMessage(
+				input.chatId,
+				language === "it" ? PROPOSAL_SEND_FAILED : PROPOSAL_SEND_FAILED_EN,
+			);
+			return;
+		}
+
+		await env.bot.sendMessage(
+			input.chatId,
+			language === "it" ? PROPOSAL_SENT : PROPOSAL_SENT_EN,
+		);
 	};
 
 const dailyReport =
