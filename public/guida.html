@@ -208,7 +208,7 @@
   var ACCENT = {
     intro:"--eat", start:"--eat", full:"--pee", feed:"--eat", bottle:"--eat",
     fine:"--eat", sleep:"--sleep", diaper:"--pee", weight:"--weight",
-    report:"--sleep", charts:"--weight", undo:"--poo", tips:"--eat"
+    report:"--sleep", charts:"--weight", proposal:"--pee", undo:"--poo", tips:"--eat"
   };
 
   // Each turn: {who:'u'|'b', text, react?, buttons?, tail?}
@@ -307,6 +307,13 @@
         {who:"b", text:"📊 Apri le statistiche del bambino", buttons:["📊 Apri statistiche"]}
       ],
       note:"<b>/grafici</b> apre la mini app con i grafici di poppate, nanne, pipì, cacca e peso." },
+
+    { topic:"proposal", kicker:"Idee e problemi", title:"Proponi",
+      chat:[
+        {who:"u", text:"/proponi Sarebbe utile segnare una poppata dimenticata"},
+        {who:"b", text:"Grazie, proposta inviata."}
+      ],
+      note:"Usa <b>/proponi</b> per mandare un'idea, modifica o problema all'admin. Includo chat e mittente, così può ricontattarti se servono dettagli." },
 
     { topic:"undo", kicker:"Ops, sbagliato", title:"Annulla",
       chat:[
