@@ -26,9 +26,7 @@ or `/language it|en`.
 
 - [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
   - might solve also the single command like `nanna 12.00 12.30` (to add it directly)
-- [ ] Check Vercel and supabase logs
-- [ ] Cron or something that builds a dashboard that I can see usage (how much and from who) (and errors maybe?)
-  - [ ] Should I just connect it to Sentry?
+- [ ] Should I connect it to Sentry? (if I do that, make sure we remove all raw_text, chat_id, user_id, tokens, secrets etc.)
 
 ## What it understands
 
