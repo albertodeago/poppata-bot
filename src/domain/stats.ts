@@ -1,3 +1,4 @@
+import type { ChatLanguage } from "./chatConfig.js";
 import type { BabyEvent } from "./event.js";
 import { aggregate, aggregateWeekly } from "./report.js";
 import { bucketWindows, type Frame } from "./time.js";
@@ -41,6 +42,7 @@ export interface WeightPoint {
 
 export interface StatsPayload {
 	babyName?: string;
+	language: ChatLanguage;
 	generatedAt: string;
 	day: FrameStats;
 	week: FrameStats;
@@ -108,9 +110,10 @@ export const buildStatsPayload = (input: {
 	events: BabyEvent[];
 	weights: WeightReading[];
 	babyName?: string;
+	language?: ChatLanguage;
 	now: Date;
 }): StatsPayload => {
-	const { events, weights, babyName, now } = input;
+	const { events, weights, babyName, language = "it", now } = input;
 	const weight: WeightPoint[] = weights.map((r) => ({
 		day: r.day,
 		kg: Math.round(r.grams / 10) / 100,
@@ -120,6 +123,7 @@ export const buildStatsPayload = (input: {
 	);
 	return {
 		...(babyName ? { babyName } : {}),
+		language,
 		generatedAt: now.toISOString(),
 		day: frameStats(events, "day", now),
 		week: frameStats(events, "week", now),

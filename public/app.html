@@ -215,14 +215,93 @@
   const $ = (id) => document.getElementById(id);
   const getVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-  const TOPICS = {
-    eat:    { title: "Poppate", glyph: "🍼", varName: "--eat" },
-    sleep:  { title: "Nanna",   glyph: "😴", varName: "--sleep" },
-    pee:    { title: "Pipì",    glyph: "💦", varName: "--pee" },
-    poo:    { title: "Cacca",   glyph: "💩", varName: "--poo" },
-    weight: { title: "Peso",    glyph: "⚖️", varName: "--weight" },
+  const TEXT = {
+    it: {
+      title: "Baby Stats",
+      kicker: "Statistiche",
+      topics: { eat: "Poppate", sleep: "Nanna", pee: "Pipì", poo: "Cacca", weight: "Peso" },
+      frames: { day: "Giorno", week: "Settimana", month: "Mese" },
+      frameLabels: { day: "Oggi", week: "Questa settimana", month: "Questo mese" },
+      period: "Periodo",
+      topicGroup: "Scegli un argomento da visualizzare",
+      timeWindow: "Periodo",
+      liveData: "Dati live",
+      openFromTelegram: "Apri questa pagina dal bot su Telegram.",
+      networkError: "Errore di rete. Riprova.",
+      invalidSession: "Sessione non valida. Riapri dal bot.",
+      forbidden: "Non sei autorizzato a vedere queste statistiche.",
+      serverError: "Errore del server. Riprova più tardi.",
+      openSession: { eat: "poppata", sleep: "nanna" },
+      openInProgress: "in corso — non conteggiata",
+      hero: { eatSub: "seno + biberon", weightLatest: "kg · ultimo", total: "totale" },
+      sides: { left: "sx", right: "dx" },
+      stats: {
+        latest: "Ultimo",
+        weight: "peso",
+        variation: "Variazione",
+        period: "sul periodo",
+        bottle: "Biberon",
+        average: "Media",
+        perFeed: "per poppata",
+        longest: "Più lunga",
+        inPeriod: "nel periodo",
+        perDay: "al giorno",
+        total: "Totale",
+      },
+    },
+    en: {
+      title: "Baby Stats",
+      kicker: "Stats",
+      topics: { eat: "Feeds", sleep: "Sleep", pee: "Pee", poo: "Poop", weight: "Weight" },
+      frames: { day: "Day", week: "Week", month: "Month" },
+      frameLabels: { day: "Today", week: "This week", month: "This month" },
+      period: "Period",
+      topicGroup: "Pick a topic to graph",
+      timeWindow: "Time window",
+      liveData: "Live data",
+      openFromTelegram: "Open this page from the bot on Telegram.",
+      networkError: "Network error. Try again.",
+      invalidSession: "Invalid session. Reopen from the bot.",
+      forbidden: "You are not authorized to view these statistics.",
+      serverError: "Server error. Try again later.",
+      openSession: { eat: "feed", sleep: "sleep" },
+      openInProgress: "in progress — not counted",
+      hero: { eatSub: "breast + bottle", weightLatest: "kg · latest", total: "total" },
+      sides: { left: "left", right: "right" },
+      stats: {
+        latest: "Latest",
+        weight: "weight",
+        variation: "Change",
+        period: "over period",
+        bottle: "Bottle",
+        average: "Average",
+        perFeed: "per feed",
+        longest: "Longest",
+        inPeriod: "in period",
+        perDay: "per day",
+        total: "Total",
+      },
+    },
   };
-  const FRAME_LABEL = { day: "Oggi", week: "Questa settimana", month: "Questo mese" };
+
+  const queryLanguage = () => {
+    const lang = new URLSearchParams(window.location.search).get("lang");
+    return lang === "it" || lang === "en" ? lang : null;
+  };
+  let language = queryLanguage() || "it";
+  const text = () => TEXT[language] || TEXT.it;
+  const topicTitle = (key) => text().topics[key] || TEXT.it.topics[key];
+  const statKey = (label, detail) => label + "<small>" + detail + "</small>";
+  const bottleCountLabel = (count) =>
+    language === "en" ? count + " " + (count === 1 ? "bottle" : "bottles") : count + " biberon";
+
+  const TOPICS = {
+    eat:    { glyph: "🍼", varName: "--eat" },
+    sleep:  { glyph: "😴", varName: "--sleep" },
+    pee:    { glyph: "💦", varName: "--pee" },
+    poo:    { glyph: "💩", varName: "--poo" },
+    weight: { glyph: "⚖️", varName: "--weight" },
+  };
   const RANGE_DAYS = { day: 7, week: 7, month: 30 };
 
   const hrs = (ms) => +(ms / 3_600_000).toFixed(1);
@@ -236,6 +315,41 @@
   const cvs = $("chart"), ctx = cvs.getContext("2d");
   let P = null, topic = "eat", frame = "day";
 
+  function applyLanguage() {
+    const t = text();
+    document.documentElement.lang = language;
+    document.title = t.title;
+    document.querySelector("header .kicker").textContent = t.kicker;
+    document.querySelector(".topics").setAttribute("aria-label", t.topicGroup);
+    document.querySelector(".frame .title").textContent = t.period;
+    document.querySelector(".seg").setAttribute("aria-label", t.timeWindow);
+    document.querySelectorAll(".topic").forEach((button) => {
+      const emoji = button.querySelector(".e");
+      button.textContent = "";
+      if (emoji) button.appendChild(emoji);
+      button.appendChild(document.createTextNode(topicTitle(button.dataset.topic)));
+    });
+    document.querySelectorAll(".seg button").forEach((button) => {
+      button.textContent = t.frames[button.dataset.frame];
+    });
+    const live = document.querySelector(".live");
+    const dot = live.querySelector(".dot");
+    live.textContent = "";
+    live.appendChild(dot);
+    live.appendChild(document.createTextNode(t.liveData));
+  }
+
+  function setOpenNote() {
+    const openEl = document.getElementById("openNote");
+    if (!P || !P.openSession) {
+      openEl.style.display = "none";
+      return;
+    }
+    const which = P.openSession === "eat" ? text().openSession.eat : text().openSession.sleep;
+    openEl.textContent = "⏳ " + which + " " + text().openInProgress;
+    openEl.style.display = "block";
+  }
+
   function fatal(msg) {
     document.body.innerHTML =
       '<main class="phone" style="padding:24px"><h1 style="font-family:var(--font-display);text-transform:uppercase">Ops</h1><p style="margin-top:12px;font-weight:600">' +
@@ -244,23 +358,21 @@
 
   async function load() {
     const tg = window.Telegram && window.Telegram.WebApp;
-    if (!tg || !tg.initData) { fatal("Apri questa pagina dal bot su Telegram."); return; }
+    applyLanguage();
+    if (!tg || !tg.initData) { fatal(text().openFromTelegram); return; }
     tg.ready(); tg.expand();
     let res;
     try {
       res = await fetch("/api/stats", { headers: { "X-Telegram-Init-Data": tg.initData } });
-    } catch (_e) { fatal("Errore di rete. Riprova."); return; }
-    if (res.status === 401) { fatal("Sessione non valida. Riapri dal bot."); return; }
-    if (res.status === 403) { fatal("Non sei autorizzato a vedere queste statistiche."); return; }
-    if (!res.ok) { fatal("Errore del server. Riprova più tardi."); return; }
+    } catch (_e) { fatal(text().networkError); return; }
+    if (res.status === 401) { fatal(text().invalidSession); return; }
+    if (res.status === 403) { fatal(text().forbidden); return; }
+    if (!res.ok) { fatal(text().serverError); return; }
     P = await res.json();
+    language = queryLanguage() || (P.language === "en" ? "en" : "it");
+    applyLanguage();
     $("babyName").textContent = P.babyName ? "👶 " + P.babyName : "";
-    const openEl = document.getElementById("openNote");
-    if (P.openSession) {
-      const which = P.openSession === "eat" ? "poppata" : "nanna";
-      openEl.textContent = "⏳ " + which + " in corso — non conteggiata";
-      openEl.style.display = "block";
-    }
+    setOpenNote();
     restore();
     setTopic(topic);
     setFrame(frame);
@@ -280,45 +392,46 @@
   }
 
   function setHeroAndCards() {
+    const tText = text();
     if (topic === "weight") {
       const cutoff = Date.parse(P.generatedAt) - RANGE_DAYS[frame] * 86_400_000;
       const pts = P.weight.filter((p) => Date.parse(p.day + "T00:00:00Z") >= cutoff);
       const latest = pts.length ? pts[pts.length - 1].kg : null;
       const delta = pts.length >= 2 ? +(pts[pts.length - 1].kg - pts[0].kg).toFixed(2) : 0;
-      $("heroLabel").textContent = "Peso";
+      $("heroLabel").textContent = topicTitle("weight");
       $("heroValue").textContent = latest === null ? "—" : latest;
-      $("heroSub").textContent = "kg · ultimo";
+      $("heroSub").textContent = tText.hero.weightLatest;
       $("statTotal").textContent = latest === null ? "—" : latest + "kg";
-      $("statTotalK").innerHTML = "Ultimo<small>peso</small>";
+      $("statTotalK").innerHTML = statKey(tText.stats.latest, tText.stats.weight);
       $("statAvg").textContent = (delta >= 0 ? "+" : "") + delta + "kg";
-      $("statAvgK").innerHTML = "Variazione<small>sul periodo</small>";
+      $("statAvgK").innerHTML = statKey(tText.stats.variation, tText.stats.period);
       return;
     }
     const t = P[frame][topic];
     if (topic === "eat") {
-      $("heroLabel").textContent = FRAME_LABEL[frame] + " · poppate";
+      $("heroLabel").textContent = tText.frameLabels[frame] + " · " + topicTitle("eat").toLowerCase();
       $("heroValue").textContent = t.total;
-      $("heroSub").textContent = t.feedSx + " sx · " + t.feedDx + " dx";
+      $("heroSub").textContent = t.feedSx + " " + tText.sides.left + " · " + t.feedDx + " " + tText.sides.right;
       $("statTotal").textContent = t.bottleMl + "ml";
-      $("statTotalK").innerHTML = "Biberon<small>" + t.bottleCount + " biberon</small>";
+      $("statTotalK").innerHTML = statKey(tText.stats.bottle, bottleCountLabel(t.bottleCount));
       $("statAvg").textContent = fmtDur(t.avgFeedMs);
-      $("statAvgK").innerHTML = "Media<small>per poppata</small>";
+      $("statAvgK").innerHTML = statKey(tText.stats.average, tText.stats.perFeed);
     } else if (topic === "sleep") {
-      $("heroLabel").textContent = FRAME_LABEL[frame] + " · sonno";
+      $("heroLabel").textContent = tText.frameLabels[frame] + " · " + topicTitle("sleep").toLowerCase();
       $("heroValue").textContent = hrs(t.total) + "h";
-      $("heroSub").textContent = "totale";
+      $("heroSub").textContent = tText.hero.total;
       $("statTotal").textContent = hrs(t.longestSleepMs) + "h";
-      $("statTotalK").innerHTML = "Più lunga<small>nel periodo</small>";
+      $("statTotalK").innerHTML = statKey(tText.stats.longest, tText.stats.inPeriod);
       $("statAvg").textContent = hrs(t.avgPerDay) + "h";
-      $("statAvgK").innerHTML = "Media<small>al giorno</small>";
+      $("statAvgK").innerHTML = statKey(tText.stats.average, tText.stats.perDay);
     } else {
-      $("heroLabel").textContent = FRAME_LABEL[frame] + " · " + TOPICS[topic].title.toLowerCase();
+      $("heroLabel").textContent = tText.frameLabels[frame] + " · " + topicTitle(topic).toLowerCase();
       $("heroValue").textContent = t.total;
-      $("heroSub").textContent = "totale";
+      $("heroSub").textContent = tText.hero.total;
       $("statTotal").textContent = t.total;
-      $("statTotalK").innerHTML = "Totale<small>nel periodo</small>";
+      $("statTotalK").innerHTML = statKey(tText.stats.total, tText.stats.inPeriod);
       $("statAvg").textContent = t.avgPerDay;
-      $("statAvgK").innerHTML = "Media<small>al giorno</small>";
+      $("statAvgK").innerHTML = statKey(tText.stats.average, tText.stats.perDay);
     }
   }
 
@@ -327,7 +440,7 @@
     const s = series();
     setHeroAndCards();
     drawChart(s.values, s.labels, s);
-    cvs.setAttribute("aria-label", TOPICS[topic].title + ": " + s.values.join(", "));
+    cvs.setAttribute("aria-label", topicTitle(topic) + ": " + s.values.join(", "));
   }
 
   function setTopic(t) {
@@ -338,7 +451,7 @@
     document.querySelectorAll(".topic").forEach((b) => b.style.removeProperty("--tc"));
     const active = document.querySelector('.topic[data-topic="' + t + '"]');
     if (active) active.style.setProperty("--tc", accent);
-    $("topicTitle").textContent = TOPICS[t].title;
+    $("topicTitle").textContent = topicTitle(t);
     $("heroGlyph").textContent = TOPICS[t].glyph;
     persist();
     render();

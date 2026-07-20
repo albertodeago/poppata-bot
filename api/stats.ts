@@ -75,10 +75,12 @@ export default async function handler(
 			cfgRes.success && cfgRes.data?.babyName
 				? cfgRes.data.babyName
 				: undefined;
+		const language = cfgRes.success ? (cfgRes.data?.language ?? "it") : "it";
 
 		const payload = buildStatsPayload({
 			events: eventsRes.data,
 			weights: weightsRes.data,
+			language,
 			now,
 			...(babyName ? { babyName } : {}),
 		});

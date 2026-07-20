@@ -61,7 +61,13 @@ describe("[STATS] buildStatsPayload", () => {
 			createdAt: d("2026-07-05T08:00:00+02:00"),
 		},
 	];
-	const p = buildStatsPayload({ events, weights, babyName: "Mochi", now });
+	const p = buildStatsPayload({
+		events,
+		weights,
+		babyName: "Mochi",
+		language: "en",
+		now,
+	});
 
 	it("counts feeds (breast + bottle) per day bucket and in total", () => {
 		// bucket index 3 == "09" window [09:00,12:00): one feed + one bottle
@@ -93,8 +99,9 @@ describe("[STATS] buildStatsPayload", () => {
 		]);
 	});
 
-	it("carries the baby name and a generatedAt stamp", () => {
+	it("carries the baby name, language, and a generatedAt stamp", () => {
 		expect(p.babyName).toBe("Mochi");
+		expect(p.language).toBe("en");
 		expect(p.generatedAt).toBe(now.toISOString());
 	});
 
