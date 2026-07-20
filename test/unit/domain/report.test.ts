@@ -171,6 +171,22 @@ describe("[REPORT] formatDaily", () => {
 		expect(text).toContain("190 ml");
 		expect(text).toContain("(2)");
 	});
+
+	it("renders English labels", () => {
+		const s = aggregate(
+			[
+				ev({
+					type: "bottle",
+					amountMl: 100,
+					startedAt: d("2026-07-01T09:00:00+02:00"),
+				}),
+			],
+			window,
+		);
+		const text = formatDaily(s, "📊 Today", "en");
+		expect(text).toContain("Sleep:");
+		expect(text).toContain("Bottles: 100 ml");
+	});
 });
 
 describe("[REPORT] formatWeekly", () => {

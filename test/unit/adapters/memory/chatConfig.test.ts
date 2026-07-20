@@ -24,10 +24,18 @@ describe("[MEMORY chatConfig repo]", () => {
 		if (c.success) {
 			expect(c.data.chatId).toBe(1);
 			expect(c.data.status).toBe("pending");
+			expect(c.data.language).toBe("it");
 			expect(c.data.babyName).toBeUndefined();
 		}
 		const got = await repo.get(1);
 		if (got.success) expect(got.data?.chatId).toBe(1);
+	});
+
+	it("create stores an explicit language", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "Dad", language: "en" });
+		const got = await repo.get(1);
+		if (got.success) expect(got.data?.language).toBe("en");
 	});
 
 	it("create stores the requester username when provided", async () => {
@@ -62,6 +70,7 @@ describe("[MEMORY chatConfig repo]", () => {
 		await repo.create({ chatId: 1, createdByName: "papà" });
 		await repo.setBabyName(1, "Leo");
 		await repo.setReportsEnabled(1, false);
+		await repo.setLanguage(1, "en");
 		const set = await repo.setStatus(1, "approved");
 		expect(set.success).toBe(true);
 		if (set.success) expect(set.data.status).toBe("approved");
@@ -69,6 +78,7 @@ describe("[MEMORY chatConfig repo]", () => {
 		if (got.success) {
 			expect(got.data?.status).toBe("approved");
 			expect(got.data?.babyName).toBe("Leo");
+			expect(got.data?.language).toBe("en");
 			expect(got.data?.reportsEnabled).toBe(false);
 		}
 	});
@@ -79,6 +89,22 @@ describe("[MEMORY chatConfig repo]", () => {
 		expect(r.success).toBe(false);
 		const got = await repo.get(999);
 		if (got.success) expect(got.data).toBeNull();
+	});
+
+	it("setLanguage toggles the language and preserves other fields", async () => {
+		const repo = makeMemoryChatConfigRepository({ logger });
+		await repo.create({ chatId: 1, createdByName: "papà" });
+		await repo.setStatus(1, "approved");
+		await repo.setBabyName(1, "Leo");
+		await repo.setReportsEnabled(1, false);
+		await repo.setLanguage(1, "en");
+		const got = await repo.get(1);
+		if (got.success) {
+			expect(got.data?.language).toBe("en");
+			expect(got.data?.babyName).toBe("Leo");
+			expect(got.data?.reportsEnabled).toBe(false);
+			expect(got.data?.status).toBe("approved");
+		}
 	});
 
 	it("listAll returns only approved chats", async () => {

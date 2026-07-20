@@ -12,6 +12,7 @@ const logger = {
 const row = (over: Record<string, unknown> = {}) => ({
 	chat_id: "-100123",
 	baby_name: null,
+	language: "it",
 	reports_enabled: true,
 	status: "approved",
 	username: null,
@@ -37,6 +38,7 @@ describe("[PG chatConfig repo]", () => {
 		if (r.success) {
 			expect(r.data?.chatId).toBe(-100123);
 			expect(r.data?.babyName).toBeUndefined();
+			expect(r.data?.language).toBe("it");
 		}
 	});
 
@@ -47,6 +49,15 @@ describe("[PG chatConfig repo]", () => {
 		const repo = makePgChatConfigRepository({ db, logger });
 		const r = await repo.get(-100123);
 		if (r.success) expect(r.data?.babyName).toBe("Leo");
+	});
+
+	it("get maps language from the column", async () => {
+		const db = {
+			query: vi.fn().mockResolvedValue([row({ language: "en" })]),
+		};
+		const repo = makePgChatConfigRepository({ db, logger });
+		const r = await repo.get(-100123);
+		if (r.success) expect(r.data?.language).toBe("en");
 	});
 
 	it("get maps status and username from the columns", async () => {
@@ -78,6 +89,7 @@ describe("[PG chatConfig repo]", () => {
 		const r = await repo.create({
 			chatId: -100123,
 			createdByName: "papà",
+			language: "en",
 			username: "tizio",
 		});
 		expect(r.success).toBe(true);
@@ -85,17 +97,17 @@ describe("[PG chatConfig repo]", () => {
 		const [sql, params] = db.query.mock.calls[0] ?? [];
 		expect(sql).toContain("INSERT INTO chat_configs");
 		expect(sql).toContain("ON CONFLICT (chat_id) DO NOTHING");
-		expect(params).toEqual([-100123, "papà", "tizio"]);
+		expect(params).toEqual([-100123, "papà", "en", "tizio"]);
 	});
 
-	it("create passes null username when absent", async () => {
+	it("create passes default language and null username when absent", async () => {
 		const db = {
 			query: vi.fn().mockResolvedValue([row({ status: "pending" })]),
 		};
 		const repo = makePgChatConfigRepository({ db, logger });
 		await repo.create({ chatId: -100123, createdByName: "papà" });
 		const [, params] = db.query.mock.calls[0] ?? [];
-		expect(params).toEqual([-100123, "papà", null]);
+		expect(params).toEqual([-100123, "papà", "it", null]);
 	});
 
 	it("create falls back to get when the row already existed (conflict)", async () => {
@@ -192,5 +204,20 @@ describe("[PG chatConfig repo]", () => {
 		expect(sql).toContain("ON CONFLICT (chat_id) DO UPDATE");
 		expect(sql).toContain("reports_enabled");
 		expect(params).toEqual([-100123, false]);
+	});
+
+	it("setLanguage upserts and returns the mapped row", async () => {
+		const db = {
+			query: vi.fn().mockResolvedValue([row({ language: "en" })]),
+		};
+		const repo = makePgChatConfigRepository({ db, logger });
+		const r = await repo.setLanguage(-100123, "en");
+		expect(r.success).toBe(true);
+		if (r.success) expect(r.data.language).toBe("en");
+		const [sql, params] = db.query.mock.calls[0] ?? [];
+		expect(sql).toContain("INSERT INTO chat_configs");
+		expect(sql).toContain("ON CONFLICT (chat_id) DO UPDATE");
+		expect(sql).toContain("language");
+		expect(params).toEqual([-100123, "en"]);
 	});
 });

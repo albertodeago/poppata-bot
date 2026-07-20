@@ -1,6 +1,7 @@
 import type {
 	ChatConfig,
 	ChatConfigRepository,
+	ChatLanguage,
 } from "../../domain/chatConfig.js";
 import type { LoggerEnv } from "../../domain/logger.js";
 import * as R from "../../domain/result.js";
@@ -12,15 +13,18 @@ export const makeMemoryChatConfigRepository = ({
 }): ChatConfigRepository => {
 	logger.info("initMemoryChatConfigRepository");
 	const byChat = new Map<number, ChatConfig>();
+	const languageOf = (prev?: ChatConfig): ChatLanguage =>
+		prev?.language ?? "it";
 
 	return {
 		get: async (chatId) => R.success(byChat.get(chatId) ?? null),
 
-		create: async ({ chatId, username }) => {
+		create: async ({ chatId, language, username }) => {
 			const existing = byChat.get(chatId);
 			if (existing) return R.success(existing);
 			const created: ChatConfig = {
 				chatId,
+				language: language ?? "it",
 				reportsEnabled: true,
 				status: "pending",
 				...(username ? { username } : {}),
@@ -34,6 +38,7 @@ export const makeMemoryChatConfigRepository = ({
 			const updated: ChatConfig = {
 				chatId,
 				babyName,
+				language: languageOf(prev),
 				reportsEnabled: prev?.reportsEnabled ?? true,
 				status: prev?.status ?? "pending",
 				...(prev?.username ? { username: prev.username } : {}),
@@ -47,7 +52,22 @@ export const makeMemoryChatConfigRepository = ({
 			const updated: ChatConfig = {
 				chatId,
 				...(prev?.babyName ? { babyName: prev.babyName } : {}),
+				language: languageOf(prev),
 				reportsEnabled: enabled,
+				status: prev?.status ?? "pending",
+				...(prev?.username ? { username: prev.username } : {}),
+			};
+			byChat.set(chatId, updated);
+			return R.success(updated);
+		},
+
+		setLanguage: async (chatId, language) => {
+			const prev = byChat.get(chatId);
+			const updated: ChatConfig = {
+				chatId,
+				...(prev?.babyName ? { babyName: prev.babyName } : {}),
+				language,
+				reportsEnabled: prev?.reportsEnabled ?? true,
 				status: prev?.status ?? "pending",
 				...(prev?.username ? { username: prev.username } : {}),
 			};
@@ -63,6 +83,7 @@ export const makeMemoryChatConfigRepository = ({
 			const updated: ChatConfig = {
 				chatId,
 				...(prev?.babyName ? { babyName: prev.babyName } : {}),
+				language: languageOf(prev),
 				reportsEnabled: prev?.reportsEnabled ?? true,
 				status,
 				...(prev?.username ? { username: prev.username } : {}),

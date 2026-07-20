@@ -28,7 +28,14 @@ const now = new Date("2026-07-02T15:00:00Z"); // 17:00 Rome
 
 describe("[LASTFEED] LAST_FEED_QUERY", () => {
 	it("matches breast queries", () => {
-		for (const s of ["che seno?", "quale seno", "ultimo seno", "che tetta"]) {
+		for (const s of [
+			"che seno?",
+			"quale seno",
+			"ultimo seno",
+			"che tetta",
+			"which breast?",
+			"last side",
+		]) {
 			expect(LAST_FEED_QUERY.test(s)).toBe(true);
 		}
 	});
@@ -54,6 +61,13 @@ describe("[LASTFEED] formatLastFeed", () => {
 	it("no feed → none message", () => {
 		expect(formatLastFeed(null, now)).toBe(
 			"Non ho ancora registrato una poppata con un seno.",
+		);
+	});
+
+	it("closed feed → English finished-at + ago", () => {
+		const f = feed({ endedAt: new Date("2026-07-02T13:00:00Z") });
+		expect(formatLastFeed(f, now, "en")).toBe(
+			"Latest feed: right breast — ended at 15:00 (2h ago)",
 		);
 	});
 });

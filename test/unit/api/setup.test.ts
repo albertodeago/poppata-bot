@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler, { COMMANDS } from "../../../api/setup.js";
+import handler, { COMMANDS, ENGLISH_COMMANDS } from "../../../api/setup.js";
 
 const mockRes = () => {
 	const res = { status: vi.fn(), json: vi.fn() };
@@ -20,6 +20,12 @@ describe("[SETUP] command list", () => {
 
 	it("COMMANDS includes the report toggle", () => {
 		expect(COMMANDS.some((c) => c.command === "report")).toBe(true);
+	});
+
+	it("ENGLISH_COMMANDS includes English aliases", () => {
+		expect(ENGLISH_COMMANDS.some((c) => c.command === "charts")).toBe(true);
+		expect(ENGLISH_COMMANDS.some((c) => c.command === "weight")).toBe(true);
+		expect(ENGLISH_COMMANDS.some((c) => c.command === "help")).toBe(true);
 	});
 });
 

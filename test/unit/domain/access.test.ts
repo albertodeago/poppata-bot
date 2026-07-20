@@ -7,7 +7,12 @@ describe("[ACCESS] approveChat", () => {
 	it("approves the chat and notifies the requester", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.setStatus.mockResolvedValue(
-			success({ chatId: 1, reportsEnabled: true, status: "approved" }),
+			success({
+				chatId: 1,
+				language: "it",
+				reportsEnabled: true,
+				status: "approved",
+			}),
 		);
 		const r = await approveChat(1)(env);
 		expect(mocks.chatConfigRepository.setStatus).toHaveBeenCalledWith(
@@ -36,7 +41,12 @@ describe("[ACCESS] banChat", () => {
 	it("bans the chat silently — no message to the target", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.chatConfigRepository.setStatus.mockResolvedValue(
-			success({ chatId: 1, reportsEnabled: true, status: "banned" }),
+			success({
+				chatId: 1,
+				language: "it",
+				reportsEnabled: true,
+				status: "banned",
+			}),
 		);
 		const r = await banChat(1)(env);
 		expect(mocks.chatConfigRepository.setStatus).toHaveBeenCalledWith(

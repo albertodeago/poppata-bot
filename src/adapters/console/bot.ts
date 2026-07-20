@@ -20,36 +20,36 @@ export const makeConsoleBot = (
 			react: async (_chatId, messageId, emoji) => {
 				console.log(`\n${emoji}  (reaction su msg ${messageId})`);
 			},
-			sendConfirmation: async (chatId, text, pendingId) => {
+			sendConfirmation: async (chatId, text, pendingId, labels) => {
 				const mid = ++msgSeq;
 				state.lastPendingId = pendingId;
 				state.lastConfirmationMessageId = mid;
 				console.log(
-					`\n⚠️  [${chatId}] ${text}\n   [Conferma] [Annulla]   (pending ${pendingId}, msg ${mid})\n   → scrivi "conf" o "ann"`,
+					`\n⚠️  [${chatId}] ${text}\n   [${labels?.confirm ?? "Conferma"}] [${labels?.cancel ?? "Annulla"}]   (pending ${pendingId}, msg ${mid})\n   → scrivi "conf" o "ann"`,
 				);
 			},
-			sendSidePrompt: async (chatId, text, pendingId) => {
+			sendSidePrompt: async (chatId, text, pendingId, labels) => {
 				const mid = ++msgSeq;
 				state.lastPendingId = pendingId;
 				state.lastConfirmationMessageId = mid;
 				console.log(
-					`\n🤱  [${chatId}] ${text}\n   [Sinistro] [Destro]   (pending ${pendingId}, msg ${mid})\n   → scrivi "sx" o "dx"`,
+					`\n🤱  [${chatId}] ${text}\n   [${labels?.left ?? "Sinistro"}] [${labels?.right ?? "Destro"}]   (pending ${pendingId}, msg ${mid})\n   → scrivi "sx" o "dx"`,
 				);
 			},
-			sendTypePrompt: async (chatId, text, pendingId) => {
+			sendTypePrompt: async (chatId, text, pendingId, labels) => {
 				const mid = ++msgSeq;
 				state.lastPendingId = pendingId;
 				state.lastConfirmationMessageId = mid;
 				console.log(
-					`\n🍼  [${chatId}] ${text}\n   [Poppata] [Nanna]   (pending ${pendingId}, msg ${mid})\n   → scrivi "eat" o "sleep"`,
+					`\n🍼  [${chatId}] ${text}\n   [${labels?.feed ?? "Poppata"}] [${labels?.sleep ?? "Nanna"}]   (pending ${pendingId}, msg ${mid})\n   → scrivi "eat" o "sleep"`,
 				);
 			},
-			sendFeedTypePrompt: async (chatId, text, pendingId) => {
+			sendFeedTypePrompt: async (chatId, text, pendingId, labels) => {
 				const mid = ++msgSeq;
 				state.lastPendingId = pendingId;
 				state.lastConfirmationMessageId = mid;
 				console.log(
-					`\n🍼  [${chatId}] ${text}\n   [Poppata] [Biberon]   (pending ${pendingId}, msg ${mid})\n   → scrivi "eat" o "bottle"`,
+					`\n🍼  [${chatId}] ${text}\n   [${labels?.feed ?? "Poppata"}] [${labels?.bottle ?? "Biberon"}]   (pending ${pendingId}, msg ${mid})\n   → scrivi "eat" o "bottle"`,
 				);
 			},
 			answerCallback: async (_id, text) => {

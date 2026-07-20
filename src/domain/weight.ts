@@ -1,3 +1,4 @@
+import type { ChatLanguage } from "./chatConfig.js";
 import type { Result } from "./result.js";
 
 export interface WeightReading {
@@ -41,6 +42,8 @@ export const parseGrams = (arg: string): number | null => {
 
 const EMPTY_HISTORY =
 	"Nessun peso registrato. Scrivi /peso 3400 per registrarne uno.";
+const EMPTY_HISTORY_EN =
+	"No weight recorded yet. Write /weight 3400 to record one.";
 
 // Italian short month names, indexed by month-1. Explicit (not locale-derived)
 // so the copy is deterministic regardless of the runtime ICU build.
@@ -59,19 +62,39 @@ const MESI = [
 	"dic",
 ];
 
+const MONTHS_EN = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
 // "2026-07-01" -> "1 lug"
-const dayLabel = (day: string): string => {
+const dayLabel = (day: string, language: ChatLanguage): string => {
 	const [, m, d] = day.split("-");
-	return `${Number(d)} ${MESI[Number(m) - 1]}`;
+	const months = language === "it" ? MESI : MONTHS_EN;
+	return `${Number(d)} ${months[Number(m) - 1]}`;
 };
 
 /** The ⚖️ history block with per-reading deltas, or the empty-state line. */
-export const formatHistory = (readings: WeightReading[]): string => {
-	if (readings.length === 0) return EMPTY_HISTORY;
-	const lines = ["⚖️ Peso"];
+export const formatHistory = (
+	readings: WeightReading[],
+	language: ChatLanguage = "it",
+): string => {
+	if (readings.length === 0)
+		return language === "it" ? EMPTY_HISTORY : EMPTY_HISTORY_EN;
+	const lines = [language === "it" ? "⚖️ Peso" : "⚖️ Weight"];
 	let prev: number | undefined;
 	for (const r of readings) {
-		let line = `${dayLabel(r.day)}  ${r.grams} g`;
+		let line = `${dayLabel(r.day, language)}  ${r.grams} g`;
 		if (prev !== undefined) {
 			const delta = r.grams - prev;
 			line += `  (${delta >= 0 ? "+" : "-"}${Math.abs(delta)})`;

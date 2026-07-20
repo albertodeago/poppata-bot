@@ -1,12 +1,12 @@
+import type { ChatConfigEnv, ChatLanguage } from "./chatConfig.js";
 import { ANNULLA_QUERY, annullaCommand } from "./commands.js";
-import {
-	type BabyEvent,
-	type EventEnv,
-	type EventSource,
-	LABEL,
-	type NewBabyEvent,
-	SIDE_LABEL,
+import type {
+	BabyEvent,
+	EventEnv,
+	EventSource,
+	NewBabyEvent,
 } from "./event.js";
+import { chatLanguage, eventLabel, internalError, sideLabel } from "./i18n.js";
 import { answerLastFeed, LAST_FEED_QUERY, lastFeedHint } from "./lastFeed.js";
 import type { LoggerEnv } from "./logger.js";
 import {
@@ -34,21 +34,25 @@ export interface BotEnv {
 			chatId: number,
 			text: string,
 			pendingId: string,
+			labels?: { confirm: string; cancel: string },
 		): Promise<void>;
 		sendSidePrompt(
 			chatId: number,
 			text: string,
 			pendingId: string,
+			labels?: { left: string; right: string },
 		): Promise<void>;
 		sendTypePrompt(
 			chatId: number,
 			text: string,
 			pendingId: string,
+			labels?: { feed: string; sleep: string },
 		): Promise<void>;
 		sendFeedTypePrompt(
 			chatId: number,
 			text: string,
 			pendingId: string,
+			labels?: { feed: string; bottle: string },
 		): Promise<void>;
 		answerCallback(callbackId: string, text?: string): Promise<void>;
 		clearKeyboard(chatId: number, messageId: number): Promise<void>;
@@ -95,17 +99,56 @@ export interface EventContext {
 }
 
 const CONFIDENCE_MIN = 0.7;
-const HELP_HINT =
-	'Non ho capito 🤔 Prova ad esempio: "poppata dx 9.15", "fine 9.40", "nanna 10", "pipì", "cacca". Usa /help per la lista completa.';
-const INTERNAL_ERROR = "Errore interno, riprova.";
-const SIDE_PROMPT = "Per quale seno? 🤱";
 /** A confirmation button is only honored within this window of its creation. */
 const PENDING_TTL_MS = 15 * 60_000;
-const PENDING_EXPIRED = "Scaduto ⏰ — più di 15 minuti, riscrivi il messaggio.";
-const TYPE_PROMPT = "Poppata o nanna? 🍼";
-const FEED_TYPE_PROMPT = "Poppata o biberon? 🍼🥛";
-const AMOUNT_PROMPT = "Quanti ml? 🥛";
-const BOTTLE_ABANDONED = "Ho annullato il biberon di prima: mancavano i ml. 🥛";
+
+const botText = (language: ChatLanguage) => ({
+	helpHint:
+		language === "it"
+			? 'Non ho capito 🤔 Prova ad esempio: "poppata dx 9.15", "fine 9.40", "nanna 10", "pipì", "cacca". Usa /help per la lista completa.'
+			: 'I did not understand 🤔 Try for example: "feed right 9.15", "end 9.40", "sleep 10", "pee", "poop". Use /help for the full list.',
+	sidePrompt: language === "it" ? "Per quale seno? 🤱" : "Which breast? 🤱",
+	pendingExpired:
+		language === "it"
+			? "Scaduto ⏰ — più di 15 minuti, riscrivi il messaggio."
+			: "Expired ⏰ — more than 15 minutes, write the message again.",
+	expiredShort: language === "it" ? "Scaduto" : "Expired",
+	canceled: language === "it" ? "Annullato" : "Canceled",
+	errorShort: language === "it" ? "Errore" : "Error",
+	typePrompt: language === "it" ? "Poppata o nanna? 🍼" : "Feed or sleep? 🍼",
+	feedTypePrompt:
+		language === "it"
+			? "Poppata o biberon? 🍼🥛"
+			: "Breastfeed or bottle? 🍼🥛",
+	amountPrompt: language === "it" ? "Quanti ml? 🥛" : "How many ml? 🥛",
+	bottleAbandoned:
+		language === "it"
+			? "Ho annullato il biberon di prima: mancavano i ml. 🥛"
+			: "I canceled the previous bottle: the ml were missing. 🥛",
+	noOpenToClose:
+		language === "it"
+			? "Nessuna sessione aperta da chiudere."
+			: "No open session to close.",
+	confirmQuestion: language === "it" ? "Confermi?" : "Confirm?",
+	buttons: {
+		confirmation:
+			language === "it"
+				? { confirm: "Conferma", cancel: "Annulla" }
+				: { confirm: "Confirm", cancel: "Cancel" },
+		side:
+			language === "it"
+				? { left: "Sinistro", right: "Destro" }
+				: { left: "Left", right: "Right" },
+		type:
+			language === "it"
+				? { feed: "Poppata", sleep: "Nanna" }
+				: { feed: "Feed", sleep: "Sleep" },
+		feedType:
+			language === "it"
+				? { feed: "🍼 Poppata", bottle: "🥛 Biberon" }
+				: { feed: "🍼 Breastfeed", bottle: "🥛 Bottle" },
+	},
+});
 
 /** A bottle-answer message: a bare 1–3 digit number, optionally with "ml". */
 const parseMl = (text: string): number | undefined => {
@@ -134,15 +177,16 @@ const newEventFrom = (intent: Intent, ctx: EventContext): NewBabyEvent => ({
 const needsSide = (intent: Intent): boolean =>
 	intent.type === "eat" && intent.action === "start" && !intent.side;
 
-const describeIntent = (intent: Intent): string => {
-	const parts = [LABEL[intent.type]];
+const describeIntent = (intent: Intent, language: ChatLanguage): string => {
+	const parts = [eventLabel(intent.type, language)];
 	if (intent.type === "bottle" && intent.amountMl !== undefined)
 		parts.push(`${intent.amountMl} ml`);
-	if (intent.side) parts.push(SIDE_LABEL[intent.side]);
-	if (intent.action === "instant") parts.push(`alle ${hhmm(intent.at)}`);
-	else
+	if (intent.side) parts.push(sideLabel(intent.side, language));
+	if (intent.action === "instant") {
+		parts.push(`${language === "it" ? "alle" : "at"} ${hhmm(intent.at)}`);
+	} else
 		parts.push(
-			`${intent.action === "end" ? "fine" : "inizio"} ${hhmm(intent.at)}`,
+			`${intent.action === "end" ? (language === "it" ? "fine" : "end") : language === "it" ? "inizio" : "start"} ${hhmm(intent.at)}`,
 		);
 	return parts.join(" ");
 };
@@ -196,7 +240,9 @@ const createPending = async (
 	ctx: EventContext,
 	intent: Intent,
 	warning: string,
+	language: ChatLanguage,
 ): Promise<void> => {
+	const t = botText(language);
 	const created = await env.pendingRepository.create({
 		chatId: ctx.chatId,
 		userId: ctx.userId,
@@ -208,10 +254,19 @@ const createPending = async (
 	});
 	if (!created.success) {
 		env.logger.error("create pending failed", created.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
-	await env.bot.sendConfirmation(ctx.chatId, warning, created.data.id);
+	if (language === "it") {
+		await env.bot.sendConfirmation(ctx.chatId, warning, created.data.id);
+		return;
+	}
+	await env.bot.sendConfirmation(
+		ctx.chatId,
+		warning,
+		created.data.id,
+		t.buttons.confirmation,
+	);
 };
 
 const promptSide = async (
@@ -219,30 +274,41 @@ const promptSide = async (
 	ctx: EventContext,
 	intent: Intent,
 	now: Date,
+	language: ChatLanguage,
 ): Promise<void> => {
+	const t = botText(language);
 	const lastRes = await env.eventRepository.findLastFeed(ctx.chatId);
 	if (!lastRes.success) {
 		env.logger.error("promptSide: findLastFeed failed", lastRes.error);
 	}
-	const hint = lastRes.success ? lastFeedHint(lastRes.data, now) : "";
+	const hint = lastRes.success ? lastFeedHint(lastRes.data, now, language) : "";
 	const created = await env.pendingRepository.create({
 		chatId: ctx.chatId,
 		userId: ctx.userId,
 		userName: ctx.userName,
 		rawText: ctx.rawText,
 		intent,
-		warning: SIDE_PROMPT,
+		warning: t.sidePrompt,
 		messageId: ctx.messageId,
 	});
 	if (!created.success) {
 		env.logger.error("create pending (side) failed", created.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
+		return;
+	}
+	if (language === "it") {
+		await env.bot.sendSidePrompt(
+			ctx.chatId,
+			`${t.sidePrompt}${hint}`,
+			created.data.id,
+		);
 		return;
 	}
 	await env.bot.sendSidePrompt(
 		ctx.chatId,
-		`${SIDE_PROMPT}${hint}`,
+		`${t.sidePrompt}${hint}`,
 		created.data.id,
+		t.buttons.side,
 	);
 };
 
@@ -250,7 +316,9 @@ const promptType = async (
 	env: BotEnv & PendingEnv & LoggerEnv,
 	ctx: EventContext,
 	at: Date,
+	language: ChatLanguage,
 ): Promise<void> => {
+	const t = botText(language);
 	// The stored `type` is a placeholder; the button verb (eat/sleep) in
 	// handleCallback sets the real one. confidence:1 — the user picks explicitly.
 	const intent: Intent = {
@@ -266,15 +334,24 @@ const promptType = async (
 		userName: ctx.userName,
 		rawText: ctx.rawText,
 		intent,
-		warning: TYPE_PROMPT,
+		warning: t.typePrompt,
 		messageId: ctx.messageId,
 	});
 	if (!created.success) {
 		env.logger.error("create pending (type) failed", created.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
-	await env.bot.sendTypePrompt(ctx.chatId, TYPE_PROMPT, created.data.id);
+	if (language === "it") {
+		await env.bot.sendTypePrompt(ctx.chatId, t.typePrompt, created.data.id);
+		return;
+	}
+	await env.bot.sendTypePrompt(
+		ctx.chatId,
+		t.typePrompt,
+		created.data.id,
+		t.buttons.type,
+	);
 };
 
 /** Ask poppata-vs-biberon for a generic feed; the button verb picks the type. */
@@ -282,7 +359,9 @@ const promptFeedType = async (
 	env: BotEnv & PendingEnv & LoggerEnv,
 	ctx: EventContext,
 	at: Date,
+	language: ChatLanguage,
 ): Promise<void> => {
+	const t = botText(language);
 	// Placeholder intent; the button verb sets the real type in handleCallback
 	// (eat → poppata start, bottle → instant then asks the ml).
 	const intent: Intent = {
@@ -298,18 +377,27 @@ const promptFeedType = async (
 		userName: ctx.userName,
 		rawText: ctx.rawText,
 		intent,
-		warning: FEED_TYPE_PROMPT,
+		warning: t.feedTypePrompt,
 		messageId: ctx.messageId,
 	});
 	if (!created.success) {
 		env.logger.error("create pending (feed type) failed", created.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
+		return;
+	}
+	if (language === "it") {
+		await env.bot.sendFeedTypePrompt(
+			ctx.chatId,
+			t.feedTypePrompt,
+			created.data.id,
+		);
 		return;
 	}
 	await env.bot.sendFeedTypePrompt(
 		ctx.chatId,
-		FEED_TYPE_PROMPT,
+		t.feedTypePrompt,
 		created.data.id,
+		t.buttons.feedType,
 	);
 };
 
@@ -318,23 +406,25 @@ const promptAmount = async (
 	env: BotEnv & PendingEnv & LoggerEnv,
 	ctx: EventContext,
 	intent: Intent,
+	language: ChatLanguage,
 ): Promise<void> => {
+	const t = botText(language);
 	const created = await env.pendingRepository.create({
 		chatId: ctx.chatId,
 		userId: ctx.userId,
 		userName: ctx.userName,
 		rawText: ctx.rawText,
 		intent,
-		warning: AMOUNT_PROMPT,
+		warning: t.amountPrompt,
 		kind: "amount",
 		messageId: ctx.messageId,
 	});
 	if (!created.success) {
 		env.logger.error("create pending (amount) failed", created.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
-	await env.bot.sendMessage(ctx.chatId, AMOUNT_PROMPT);
+	await env.bot.sendMessage(ctx.chatId, t.amountPrompt);
 };
 
 /** Apply an answered ml to its bottle: save + echo, or confirm if unusually large. */
@@ -342,6 +432,7 @@ const resolveAmount = async (
 	env: BotEnv & EventEnv & PendingEnv & LoggerEnv,
 	p: PendingConfirmation,
 	ml: number,
+	language: ChatLanguage,
 ): Promise<void> => {
 	const ctx: EventContext = {
 		chatId: p.chatId,
@@ -351,9 +442,9 @@ const resolveAmount = async (
 		rawText: p.rawText,
 	};
 	const intent: Intent = { ...p.intent, amountMl: ml };
-	const decision = decide(intent, null);
+	const decision = decide(intent, null, language);
 	if (decision.kind === "confirm") {
-		await createPending(env, ctx, decision.intent, decision.warning);
+		await createPending(env, ctx, decision.intent, decision.warning, language);
 		return;
 	}
 	if (decision.kind === "error") {
@@ -362,74 +453,93 @@ const resolveAmount = async (
 			"resolveAmount: unexpected decide error",
 			decision.message,
 		);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
 	const applied = await applyIntent(decision.intent, ctx)(env);
 	if (!applied.success) {
 		env.logger.error("applyIntent (amount) failed", applied.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
-	await env.bot.sendMessage(ctx.chatId, bottleEcho(decision.intent));
+	await env.bot.sendMessage(ctx.chatId, bottleEcho(decision.intent, language));
 };
 
 const sendDurationReply = async (
 	env: BotEnv,
 	chatId: number,
 	closed: BabyEvent & { endedAt: Date },
+	language: ChatLanguage,
 ): Promise<void> => {
 	const dur = formatDuration(
 		closed.endedAt.getTime() - closed.startedAt.getTime(),
 	);
 	await env.bot.sendMessage(
 		chatId,
-		`Ok, aggiunta ✅ — durata ${LABEL[closed.type]}: ${dur}`,
+		language === "it"
+			? `Ok, aggiunta ✅ — durata ${eventLabel(closed.type, language)}: ${dur}`
+			: `Ok, added ✅ — ${eventLabel(closed.type, language)} duration: ${dur}`,
 	);
 };
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** "Poppata iniziata alle 09:15", plus "— seno destro" when a side is set. */
-const startedText = (intent: Intent): string => {
-	let text = `${cap(LABEL[intent.type])} iniziata alle ${hhmm(intent.at)}`;
-	if (intent.side) text += ` — seno ${SIDE_LABEL[intent.side]}`;
+const startedText = (intent: Intent, language: ChatLanguage): string => {
+	let text =
+		language === "it"
+			? `${cap(eventLabel(intent.type, language))} iniziata alle ${hhmm(intent.at)}`
+			: `${cap(eventLabel(intent.type, language))} started at ${hhmm(intent.at)}`;
+	if (intent.side) {
+		text +=
+			language === "it"
+				? ` — seno ${sideLabel(intent.side, language)}`
+				: ` — ${sideLabel(intent.side, language)} breast`;
+	}
 	return text;
 };
 
 /** "🥛 Biberon 100 ml alle 14:30 ✅" — feedback for a saved bottle. */
-const bottleEcho = (intent: Intent): string =>
-	`🥛 ${cap(LABEL.bottle)} ${intent.amountMl ?? 0} ml alle ${hhmm(intent.at)} ✅`;
+const bottleEcho = (intent: Intent, language: ChatLanguage): string =>
+	language === "it"
+		? `🥛 ${cap(eventLabel("bottle", language))} ${intent.amountMl ?? 0} ml alle ${hhmm(intent.at)} ✅`
+		: `🥛 ${cap(eventLabel("bottle", language))} ${intent.amountMl ?? 0} ml at ${hhmm(intent.at)} ✅`;
 
 const save = async (
 	env: BotEnv & EventEnv & LoggerEnv,
 	ctx: EventContext,
 	intent: Intent,
 	timeGiven: boolean,
+	language: ChatLanguage,
 ): Promise<void> => {
 	const applied = await applyIntent(intent, ctx)(env);
 	if (!applied.success) {
 		env.logger.error("applyIntent failed", applied.error);
-		await env.bot.sendMessage(ctx.chatId, INTERNAL_ERROR);
+		await env.bot.sendMessage(ctx.chatId, internalError(language));
 		return;
 	}
 	const closed = applied.data.closed;
 	if (intent.action === "end" && closed?.endedAt) {
-		await sendDurationReply(env, ctx.chatId, {
-			...closed,
-			endedAt: closed.endedAt,
-		});
+		await sendDurationReply(
+			env,
+			ctx.chatId,
+			{
+				...closed,
+				endedAt: closed.endedAt,
+			},
+			language,
+		);
 		return;
 	}
 	// A start whose time we defaulted to "now": confirm the assumed time in words
 	// (eat→"poppata", sleep→"nanna" are both feminine, so "iniziata" agrees).
 	if (intent.action === "start" && !timeGiven) {
-		await env.bot.sendMessage(ctx.chatId, startedText(intent));
+		await env.bot.sendMessage(ctx.chatId, startedText(intent, language));
 		return;
 	}
 	// A bottle echoes its ml + time so the recorded amount is visible.
 	if (intent.type === "bottle") {
-		await env.bot.sendMessage(ctx.chatId, bottleEcho(intent));
+		await env.bot.sendMessage(ctx.chatId, bottleEcho(intent, language));
 		return;
 	}
 	await env.bot.react(ctx.chatId, ctx.messageId, "👍");
@@ -439,20 +549,29 @@ const feedbackFor = async (
 	env: BotEnv,
 	p: PendingConfirmation,
 	closed: BabyEvent | undefined,
+	language: ChatLanguage,
 ): Promise<void> => {
 	if (p.intent.action === "end" && closed?.endedAt) {
-		await sendDurationReply(env, p.chatId, {
-			...closed,
-			endedAt: closed.endedAt,
-		});
+		await sendDurationReply(
+			env,
+			p.chatId,
+			{
+				...closed,
+				endedAt: closed.endedAt,
+			},
+			language,
+		);
 		return;
 	}
 	if (p.intent.action === "start") {
-		await env.bot.sendMessage(p.chatId, `${startedText(p.intent)} ✅`);
+		await env.bot.sendMessage(
+			p.chatId,
+			`${startedText(p.intent, language)} ✅`,
+		);
 		return;
 	}
 	if (p.intent.type === "bottle") {
-		await env.bot.sendMessage(p.chatId, bottleEcho(p.intent));
+		await env.bot.sendMessage(p.chatId, bottleEcho(p.intent, language));
 		return;
 	}
 	// react on the ORIGINAL user message (instant events)
@@ -461,8 +580,12 @@ const feedbackFor = async (
 
 export const handleCallback =
 	(cb: IncomingCallback) =>
-	async (env: BotEnv & EventEnv & PendingEnv & LoggerEnv): Promise<void> => {
+	async (
+		env: BotEnv & EventEnv & PendingEnv & ChatConfigEnv & LoggerEnv,
+	): Promise<void> => {
 		const [verb, pendingId] = cb.data.split(":");
+		const fallbackLanguage = await chatLanguage(env, cb.chatId);
+		const fallbackText = botText(fallbackLanguage);
 		if (!pendingId) {
 			await env.bot.answerCallback(cb.id);
 			return;
@@ -478,23 +601,25 @@ export const handleCallback =
 		if (!p) {
 			// stale / already handled
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
-			await env.bot.answerCallback(cb.id, "Scaduto");
+			await env.bot.answerCallback(cb.id, fallbackText.expiredShort);
 			return;
 		}
+		const language = await chatLanguage(env, p.chatId);
+		const t = botText(language);
 
 		// Honor a tap only within PENDING_TTL_MS: past that the intent's time is
 		// too stale to trust, so discard it and ask the user to resend.
 		if (cb.at.getTime() - p.createdAt.getTime() > PENDING_TTL_MS) {
 			await env.pendingRepository.delete(p.id);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
-			await env.bot.answerCallback(cb.id, PENDING_EXPIRED);
+			await env.bot.answerCallback(cb.id, t.pendingExpired);
 			return;
 		}
 
 		if (verb === "ann") {
 			await env.pendingRepository.delete(p.id);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
-			await env.bot.answerCallback(cb.id, "Annullato");
+			await env.bot.answerCallback(cb.id, t.canceled);
 			return;
 		}
 
@@ -512,10 +637,13 @@ export const handleCallback =
 			const applied = await applyIntent(intent, ctx)(env);
 			if (!applied.success) {
 				env.logger.error("applyIntent (side) failed", applied.error);
-				await env.bot.answerCallback(cb.id, "Errore");
+				await env.bot.answerCallback(cb.id, t.errorShort);
 				return;
 			}
-			await env.bot.sendMessage(ctx.chatId, `${startedText(intent)} ✅`);
+			await env.bot.sendMessage(
+				ctx.chatId,
+				`${startedText(intent, language)} ✅`,
+			);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -526,7 +654,7 @@ export const handleCallback =
 		// bottle and ask for the ml.
 		if (verb === "bottle") {
 			const intent: Intent = { ...p.intent, type: "bottle", action: "instant" };
-			await promptAmount(env, ctx, intent);
+			await promptAmount(env, ctx, intent, language);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -542,12 +670,18 @@ export const handleCallback =
 			const openRes = await env.eventRepository.findOpenSession(ctx.chatId);
 			if (!openRes.success) {
 				env.logger.error("findOpenSession (type) failed", openRes.error);
-				await env.bot.answerCallback(cb.id, "Errore");
+				await env.bot.answerCallback(cb.id, t.errorShort);
 				return;
 			}
-			const decision = decide(intent, openRes.data);
+			const decision = decide(intent, openRes.data, language);
 			if (decision.kind === "confirm") {
-				await createPending(env, ctx, decision.intent, decision.warning);
+				await createPending(
+					env,
+					ctx,
+					decision.intent,
+					decision.warning,
+					language,
+				);
 				await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 				await env.pendingRepository.delete(p.id);
 				await env.bot.answerCallback(cb.id);
@@ -555,7 +689,7 @@ export const handleCallback =
 			}
 			// decision.kind === "save" (decide returns "error" only for end intents).
 			if (needsSide(intent)) {
-				await promptSide(env, ctx, intent, cb.at);
+				await promptSide(env, ctx, intent, cb.at, language);
 				await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 				await env.pendingRepository.delete(p.id);
 				await env.bot.answerCallback(cb.id);
@@ -564,10 +698,13 @@ export const handleCallback =
 			const applied = await applyIntent(intent, ctx)(env);
 			if (!applied.success) {
 				env.logger.error("applyIntent (type) failed", applied.error);
-				await env.bot.answerCallback(cb.id, "Errore");
+				await env.bot.answerCallback(cb.id, t.errorShort);
 				return;
 			}
-			await env.bot.sendMessage(ctx.chatId, `${startedText(intent)} ✅`);
+			await env.bot.sendMessage(
+				ctx.chatId,
+				`${startedText(intent, language)} ✅`,
+			);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -576,7 +713,7 @@ export const handleCallback =
 
 		// verb === "conf": a confirmed bottle still missing its ml asks for it.
 		if (needsAmount(p.intent)) {
-			await promptAmount(env, ctx, p.intent);
+			await promptAmount(env, ctx, p.intent, language);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -585,7 +722,7 @@ export const handleCallback =
 
 		// verb === "conf": a confirmed feed start still missing its side asks for it.
 		if (needsSide(p.intent)) {
-			await promptSide(env, ctx, p.intent, cb.at);
+			await promptSide(env, ctx, p.intent, cb.at, language);
 			await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 			await env.pendingRepository.delete(p.id);
 			await env.bot.answerCallback(cb.id);
@@ -595,10 +732,10 @@ export const handleCallback =
 		const applied = await applyIntent(p.intent, ctx)(env);
 		if (!applied.success) {
 			env.logger.error("applyIntent (confirm) failed", applied.error);
-			await env.bot.answerCallback(cb.id, "Errore");
+			await env.bot.answerCallback(cb.id, t.errorShort);
 			return;
 		}
-		await feedbackFor(env, p, applied.data.closed);
+		await feedbackFor(env, p, applied.data.closed, language);
 		await env.bot.clearKeyboard(cb.chatId, cb.messageId);
 		await env.pendingRepository.delete(p.id);
 		await env.bot.answerCallback(cb.id);
@@ -607,8 +744,10 @@ export const handleCallback =
 export const handleMessage =
 	(msg: IncomingMessage) =>
 	async (
-		env: BotEnv & EventEnv & PendingEnv & ParserEnv & LoggerEnv,
+		env: BotEnv & EventEnv & PendingEnv & ParserEnv & ChatConfigEnv & LoggerEnv,
 	): Promise<void> => {
+		const language = await chatLanguage(env, msg.chatId);
+		const t = botText(language);
 		const arrival = romeNow(msg.at);
 		const normalized = normalize(msg.text);
 
@@ -625,10 +764,10 @@ export const handleMessage =
 			await env.pendingRepository.delete(p.id);
 			const ml = parseMl(msg.text);
 			if (ml !== undefined) {
-				await resolveAmount(env, p, ml);
+				await resolveAmount(env, p, ml, language);
 				return;
 			}
-			await env.bot.sendMessage(msg.chatId, BOTTLE_ABANDONED);
+			await env.bot.sendMessage(msg.chatId, t.bottleAbandoned);
 			// fall through: handle this message as usual
 		}
 
@@ -669,7 +808,7 @@ export const handleMessage =
 				messageId: msg.messageId,
 				rawText: msg.text,
 			};
-			await promptFeedType(env, feedCtx, at);
+			await promptFeedType(env, feedCtx, at, language);
 			return;
 		}
 
@@ -687,7 +826,7 @@ export const handleMessage =
 				messageId: msg.messageId,
 				rawText: msg.text,
 			};
-			await promptType(env, typeCtx, at);
+			await promptType(env, typeCtx, at, language);
 			return;
 		}
 
@@ -710,7 +849,7 @@ export const handleMessage =
 		if (!action) {
 			// Nudge only genuine-but-unparseable attempts; ignore chatter silently.
 			if (hasBabySignal(normalized)) {
-				await env.bot.sendMessage(msg.chatId, HELP_HINT);
+				await env.bot.sendMessage(msg.chatId, t.helpHint);
 			}
 			return;
 		}
@@ -718,17 +857,14 @@ export const handleMessage =
 		const openRes = await env.eventRepository.findOpenSession(msg.chatId);
 		if (!openRes.success) {
 			env.logger.error("findOpenSession failed", openRes.error);
-			await env.bot.sendMessage(msg.chatId, INTERNAL_ERROR);
+			await env.bot.sendMessage(msg.chatId, internalError(language));
 			return;
 		}
 		const open = openRes.data;
 
 		if (action === "end" && !type) {
 			if (!open) {
-				await env.bot.sendMessage(
-					msg.chatId,
-					"Nessuna sessione aperta da chiudere.",
-				);
+				await env.bot.sendMessage(msg.chatId, t.noOpenToClose);
 				return;
 			}
 			type = open.type;
@@ -736,7 +872,7 @@ export const handleMessage =
 
 		if (!type) {
 			if (hasBabySignal(normalized)) {
-				await env.bot.sendMessage(msg.chatId, HELP_HINT);
+				await env.bot.sendMessage(msg.chatId, t.helpHint);
 			}
 			return;
 		}
@@ -768,37 +904,50 @@ export const handleMessage =
 		if (confidence < CONFIDENCE_MIN) {
 			const closeNote =
 				intent.action === "start" && open
-					? ` C'è già una ${LABEL[open.type]} aperta dalle ${hhmm(
-							open.startedAt,
-						)}, la chiudo alle ${hhmm(intent.at)}.`
+					? language === "it"
+						? ` C'è già una ${eventLabel(open.type, language)} aperta dalle ${hhmm(
+								open.startedAt,
+							)}, la chiudo alle ${hhmm(intent.at)}.`
+						: ` There is already an open ${eventLabel(open.type, language)} since ${hhmm(
+								open.startedAt,
+							)}, I will close it at ${hhmm(intent.at)}.`
 					: "";
 			await createPending(
 				env,
 				ctx,
 				intent,
-				`Ho capito: ${describeIntent(intent)}.${closeNote} Confermi?`,
+				language === "it"
+					? `Ho capito: ${describeIntent(intent, language)}.${closeNote} ${t.confirmQuestion}`
+					: `I understood: ${describeIntent(intent, language)}.${closeNote} ${t.confirmQuestion}`,
+				language,
 			);
 			return;
 		}
 
-		const decision = decide(intent, open);
+		const decision = decide(intent, open, language);
 		switch (decision.kind) {
 			case "error":
 				await env.bot.sendMessage(msg.chatId, decision.message);
 				return;
 			case "confirm":
-				await createPending(env, ctx, decision.intent, decision.warning);
+				await createPending(
+					env,
+					ctx,
+					decision.intent,
+					decision.warning,
+					language,
+				);
 				return;
 			case "save":
 				if (needsAmount(decision.intent)) {
-					await promptAmount(env, ctx, decision.intent);
+					await promptAmount(env, ctx, decision.intent, language);
 					return;
 				}
 				if (needsSide(decision.intent)) {
-					await promptSide(env, ctx, decision.intent, msg.at);
+					await promptSide(env, ctx, decision.intent, msg.at, language);
 					return;
 				}
-				await save(env, ctx, decision.intent, timeGiven);
+				await save(env, ctx, decision.intent, timeGiven, language);
 				return;
 		}
 	};

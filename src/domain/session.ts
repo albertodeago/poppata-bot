@@ -1,4 +1,6 @@
-import { type BabyEvent, LABEL } from "./event.js";
+import type { ChatLanguage } from "./chatConfig.js";
+import type { BabyEvent } from "./event.js";
+import { eventLabel } from "./i18n.js";
 import type { Intent } from "./parse.js";
 import { formatDuration, hhmm } from "./time.js";
 
@@ -13,17 +15,27 @@ const DAY_MS = 24 * 60 * 60_000;
 /** Above this, a bottle amount is confirmed before saving (fat-finger guard). */
 export const BOTTLE_MAX_ML = 300;
 
-export const decide = (intent: Intent, open: BabyEvent | null): Decision => {
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+export const decide = (
+	intent: Intent,
+	open: BabyEvent | null,
+	language: ChatLanguage = "it",
+): Decision => {
 	if (intent.action === "instant") {
 		if (
 			intent.type === "bottle" &&
 			intent.amountMl !== undefined &&
 			intent.amountMl > BOTTLE_MAX_ML
 		) {
+			const label = eventLabel("bottle", language);
 			return {
 				kind: "confirm",
 				intent,
-				warning: `${LABEL.bottle.charAt(0).toUpperCase()}${LABEL.bottle.slice(1)} di ${intent.amountMl} ml, confermi?`,
+				warning:
+					language === "it"
+						? `${cap(label)} di ${intent.amountMl} ml, confermi?`
+						: `${cap(label)} with ${intent.amountMl} ml, confirm?`,
 			};
 		}
 		return { kind: "save", intent };
@@ -34,9 +46,14 @@ export const decide = (intent: Intent, open: BabyEvent | null): Decision => {
 			return {
 				kind: "confirm",
 				intent,
-				warning: `C'è già una ${LABEL[open.type]} aperta dalle ${hhmm(
-					open.startedAt,
-				)}. Chiuderla alle ${hhmm(intent.at)} e iniziare ${LABEL[intent.type]}?`,
+				warning:
+					language === "it"
+						? `C'è già una ${eventLabel(open.type, language)} aperta dalle ${hhmm(
+								open.startedAt,
+							)}. Chiuderla alle ${hhmm(intent.at)} e iniziare ${eventLabel(intent.type, language)}?`
+						: `There is already an open ${eventLabel(open.type, language)} since ${hhmm(
+								open.startedAt,
+							)}. Close it at ${hhmm(intent.at)} and start ${eventLabel(intent.type, language)}?`,
 			};
 		}
 		return { kind: "save", intent };
@@ -44,7 +61,13 @@ export const decide = (intent: Intent, open: BabyEvent | null): Decision => {
 
 	// action === "end"
 	if (!open)
-		return { kind: "error", message: "Nessuna sessione aperta da chiudere." };
+		return {
+			kind: "error",
+			message:
+				language === "it"
+					? "Nessuna sessione aperta da chiudere."
+					: "No open session to close.",
+		};
 
 	let endedAt = intent.at;
 	if (endedAt.getTime() < open.startedAt.getTime()) {
@@ -57,9 +80,14 @@ export const decide = (intent: Intent, open: BabyEvent | null): Decision => {
 		return {
 			kind: "confirm",
 			intent: adjusted,
-			warning: `Durata ${LABEL[open.type]} sospetta: ${formatDuration(
-				durationMs,
-			)}. Salvare comunque?`,
+			warning:
+				language === "it"
+					? `Durata ${eventLabel(open.type, language)} sospetta: ${formatDuration(
+							durationMs,
+						)}. Salvare comunque?`
+					: `Suspicious ${eventLabel(open.type, language)} duration: ${formatDuration(
+							durationMs,
+						)}. Save anyway?`,
 		};
 	}
 	return { kind: "save", intent: adjusted };

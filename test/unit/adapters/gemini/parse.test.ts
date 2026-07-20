@@ -137,6 +137,7 @@ describe("[GEMINI parser]", () => {
 		const body = JSON.parse(call?.[1]?.body);
 		expect(body.generationConfig.responseMimeType).toBe("application/json");
 		expect(body.generationConfig.responseSchema.required).toContain("type");
+		expect(body.contents[0].parts[0].text).toContain("italiano/inglese");
 	});
 
 	it("retries on 429 (rate limit) and succeeds on a later attempt", async () => {

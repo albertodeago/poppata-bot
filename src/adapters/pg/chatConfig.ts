@@ -2,6 +2,7 @@ import type {
 	AccessStatus,
 	ChatConfig,
 	ChatConfigRepository,
+	ChatLanguage,
 } from "../../domain/chatConfig.js";
 import type { DBEnv } from "../../domain/db.js";
 import type { LoggerEnv } from "../../domain/logger.js";
@@ -10,6 +11,7 @@ import { tryCatch } from "../../domain/result.js";
 interface ChatConfigRow {
 	chat_id: string;
 	baby_name: string | null;
+	language: string;
 	reports_enabled: boolean;
 	status: string;
 	username: string | null;
@@ -18,12 +20,14 @@ interface ChatConfigRow {
 const mapRow = (row: ChatConfigRow): ChatConfig => ({
 	chatId: Number(row.chat_id),
 	...(row.baby_name ? { babyName: row.baby_name } : {}),
+	language: row.language as ChatLanguage,
 	reportsEnabled: row.reports_enabled,
 	status: row.status as AccessStatus,
 	...(row.username ? { username: row.username } : {}),
 });
 
-const COLUMNS = "chat_id, baby_name, reports_enabled, status, username";
+const COLUMNS =
+	"chat_id, baby_name, language, reports_enabled, status, username";
 
 export const makePgChatConfigRepository = (
 	env: DBEnv & LoggerEnv,
@@ -44,15 +48,15 @@ export const makePgChatConfigRepository = (
 	return {
 		get,
 
-		create: ({ chatId, createdByName, username }) =>
+		create: ({ chatId, createdByName, language, username }) =>
 			tryCatch(
 				async () => {
 					const rows = await env.db.query(
-						`INSERT INTO chat_configs (chat_id, created_by_name, username)
-						 VALUES ($1, $2, $3)
+						`INSERT INTO chat_configs (chat_id, created_by_name, language, username)
+						 VALUES ($1, $2, $3, $4)
 						 ON CONFLICT (chat_id) DO NOTHING
 						 RETURNING ${COLUMNS}`,
-						[chatId, createdByName, username ?? null],
+						[chatId, createdByName, language ?? "it", username ?? null],
 					);
 					const r = rows[0] as ChatConfigRow | undefined;
 					if (r) return mapRow(r);
@@ -94,6 +98,23 @@ export const makePgChatConfigRepository = (
 					);
 					const r = rows[0] as ChatConfigRow | undefined;
 					if (!r) throw new Error("setReportsEnabled returned no row");
+					return mapRow(r);
+				},
+				(e) => e,
+			),
+
+		setLanguage: (chatId: number, language: ChatLanguage) =>
+			tryCatch(
+				async () => {
+					const rows = await env.db.query(
+						`INSERT INTO chat_configs (chat_id, language)
+						 VALUES ($1, $2)
+						 ON CONFLICT (chat_id) DO UPDATE SET language = EXCLUDED.language
+						 RETURNING ${COLUMNS}`,
+						[chatId, language],
+					);
+					const r = rows[0] as ChatConfigRow | undefined;
+					if (!r) throw new Error("setLanguage returned no row");
 					return mapRow(r);
 				},
 				(e) => e,

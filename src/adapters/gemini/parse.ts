@@ -21,9 +21,9 @@ const RESPONSE_SCHEMA = {
 };
 
 const PROMPT = [
-	"Sei un parser per un bot che traccia le attività di un neonato.",
-	"Classifica il messaggio in un'attività: eat (poppata al seno), sleep (nanna), pee (pipì), poop (cacca), bottle (biberon/latte artificiale).",
-	"action: start (inizio), end (fine); pee, poop e bottle sono sempre instant.",
+	"Sei un parser bilingue italiano/inglese per un bot che traccia le attività di un neonato.",
+	"Classifica il messaggio in un'attività: eat (poppata al seno/breastfeeding), sleep (nanna/sleep/nap), pee (pipì/pee/wet diaper), poop (cacca/poop/dirty diaper), bottle (biberon/bottle/formula).",
+	"action: start (inizio/start), end (fine/done/finish/end); pee, poop e bottle sono sempre instant.",
 	'side: dx o sx solo per eat, altrimenti "none".',
 	"Se il messaggio indica un orario, imposta hour (0-23) e minute (0-59); altrimenti hour = -1.",
 	"amount: per bottle, i millilitri di latte (intero); altrimenti -1.",

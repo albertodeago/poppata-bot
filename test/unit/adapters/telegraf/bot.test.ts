@@ -21,6 +21,7 @@ const makeChatConfigRepo = () => ({
 	create: vi.fn(),
 	setBabyName: vi.fn(),
 	setReportsEnabled: vi.fn(),
+	setLanguage: vi.fn(),
 	setStatus: vi.fn(),
 	listAll: vi.fn(),
 });

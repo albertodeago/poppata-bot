@@ -1,4 +1,6 @@
-import { type BabyEvent, isOpenSession, LABEL } from "./event.js";
+import type { ChatLanguage } from "./chatConfig.js";
+import { type BabyEvent, isOpenSession } from "./event.js";
+import { eventLabel } from "./i18n.js";
 import { formatDuration, hhmm, romeNow, type TimeWindow } from "./time.js";
 
 export interface DailyStats {
@@ -120,12 +122,30 @@ export const aggregateWeekly = (
 	return { ...base, avgFeedMs, longestSleepMs, avgFeedGapMs };
 };
 
-const footer = (s: DailyStats): string =>
+const footer = (s: DailyStats, language: ChatLanguage): string =>
 	s.openExcluded
-		? "\n\n⚠️ Una sessione era ancora aperta e non è stata conteggiata."
+		? language === "it"
+			? "\n\n⚠️ Una sessione era ancora aperta e non è stata conteggiata."
+			: "\n\n⚠️ One session was still open and was not counted."
 		: "";
 
-export const formatDaily = (s: DailyStats, title: string): string => {
+export const formatDaily = (
+	s: DailyStats,
+	title: string,
+	language: ChatLanguage = "it",
+): string => {
+	if (language === "en") {
+		const lines = [
+			title,
+			"",
+			`😴 Sleep: ${formatDuration(s.sleepMs)}`,
+			`🍼 Feeds: ${formatDuration(s.eatMs)} (${s.feedCount} — right ${s.feedDx}, left ${s.feedSx})`,
+			`🥛 Bottles: ${s.bottleMl} ml (${s.bottleCount})`,
+			`💧 Pee: ${s.peeCount}`,
+			`💩 Poop: ${s.poopCount}`,
+		];
+		return lines.join("\n") + footer(s, language);
+	}
 	const lines = [
 		title,
 		"",
@@ -135,10 +155,27 @@ export const formatDaily = (s: DailyStats, title: string): string => {
 		`💧 Pipì: ${s.peeCount}`,
 		`💩 Cacca: ${s.poopCount}`,
 	];
-	return lines.join("\n") + footer(s);
+	return lines.join("\n") + footer(s, language);
 };
 
-export const formatWeekly = (s: WeeklyStats, title: string): string => {
+export const formatWeekly = (
+	s: WeeklyStats,
+	title: string,
+	language: ChatLanguage = "it",
+): string => {
+	if (language === "en") {
+		const lines = [
+			title,
+			"",
+			`😴 Sleep: ${formatDuration(s.sleepMs)} (longest: ${formatDuration(s.longestSleepMs)})`,
+			`🍼 Feeds: ${formatDuration(s.eatMs)} (${s.feedCount} — right ${s.feedDx}, left ${s.feedSx})`,
+			`   average feed: ${formatDuration(s.avgFeedMs)}, average gap: ${formatDuration(s.avgFeedGapMs)}`,
+			`🥛 Bottles: ${s.bottleMl} ml (${s.bottleCount})`,
+			`💧 Pee: ${s.peeCount}`,
+			`💩 Poop: ${s.poopCount}`,
+		];
+		return lines.join("\n") + footer(s, language);
+	}
 	const lines = [
 		title,
 		"",
@@ -149,19 +186,22 @@ export const formatWeekly = (s: WeeklyStats, title: string): string => {
 		`💧 Pipì: ${s.peeCount}`,
 		`💩 Cacca: ${s.poopCount}`,
 	];
-	return lines.join("\n") + footer(s);
+	return lines.join("\n") + footer(s, language);
 };
 
 /** Fixed-width label so the range column of eat/sleep rows lines up.
  *  Emoji cell width varies by client, so alignment is best-effort. */
-const scheduleBody = (e: BabyEvent): string => {
-	if (e.type === "pee") return `💧 ${LABEL.pee}`;
-	if (e.type === "poop") return `💩 ${LABEL.poop}`;
-	if (e.type === "bottle") return `🥛 ${LABEL.bottle} ${e.amountMl ?? 0} ml`;
+const scheduleBody = (e: BabyEvent, language: ChatLanguage): string => {
+	if (e.type === "pee") return `💧 ${eventLabel("pee", language)}`;
+	if (e.type === "poop") return `💩 ${eventLabel("poop", language)}`;
+	if (e.type === "bottle")
+		return `🥛 ${eventLabel("bottle", language)} ${e.amountMl ?? 0} ml`;
 	const icon = e.type === "eat" ? "🍼" : "😴";
 	const side = e.type === "eat" && e.side ? ` ${e.side}` : "";
 	const label = `${icon}${side}`.padEnd(6);
-	if (isOpenSession(e)) return `${label} da ${hhmm(e.startedAt)} ⏳`;
+	if (isOpenSession(e)) {
+		return `${label} ${language === "it" ? "da" : "since"} ${hhmm(e.startedAt)} ⏳`;
+	}
 	const end = e.endedAt as Date; // closed eat/sleep always has endedAt
 	const dur = formatDuration(end.getTime() - e.startedAt.getTime());
 	return `${label} ${hhmm(e.startedAt)}→${hhmm(end)} (${dur})`;
@@ -170,15 +210,22 @@ const scheduleBody = (e: BabyEvent): string => {
 export const formatSchedule = (
 	events: BabyEvent[],
 	window: TimeWindow,
+	language: ChatLanguage = "it",
 ): string => {
-	const header = `📋 Scaletta di oggi — ${romeNow(window.start).toFormat("d/M")}`;
+	const header =
+		language === "it"
+			? `📋 Scaletta di oggi — ${romeNow(window.start).toFormat("d/M")}`
+			: `📋 Today's schedule — ${romeNow(window.start).toFormat("d/M")}`;
 	if (events.length === 0) {
-		return `${header}\n\nNessun evento ancora oggi.`;
+		return `${header}\n\n${language === "it" ? "Nessun evento ancora oggi." : "No events yet today."}`;
 	}
 	const rows = [...events]
 		.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
-		.map((e) => `${hhmm(e.startedAt).padStart(5)}  ${scheduleBody(e)}`);
+		.map(
+			(e) => `${hhmm(e.startedAt).padStart(5)}  ${scheduleBody(e, language)}`,
+		);
 	const s = aggregate(events, window);
-	const footer = `Totali: 🍼 ${s.feedCount} · 🥛 ${s.bottleMl} ml · 😴 ${formatDuration(s.sleepMs)} · 💧 ${s.peeCount} · 💩 ${s.poopCount}`;
+	const totals = language === "it" ? "Totali" : "Totals";
+	const footer = `${totals}: 🍼 ${s.feedCount} · 🥛 ${s.bottleMl} ml · 😴 ${formatDuration(s.sleepMs)} · 💧 ${s.peeCount} · 💩 ${s.poopCount}`;
 	return `<pre>${[header, "", ...rows, "", footer].join("\n")}</pre>`;
 };

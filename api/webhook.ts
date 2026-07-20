@@ -21,6 +21,7 @@ import {
 	statoCommand,
 } from "../src/domain/commands.js";
 import {
+	languageCommand,
 	nomeCommand,
 	registerChat,
 	reportCommand,
@@ -38,7 +39,9 @@ const senderName = (from?: {
 /** Register (or greet) a chat from a webhook ctx — shared by /start and the add-event. */
 const registerFrom = (
 	chat: Chat,
-	from: { first_name?: string; username?: string } | undefined,
+	from:
+		| { first_name?: string; username?: string; language_code?: string }
+		| undefined,
 	name?: string,
 ): Promise<void> => {
 	const chatTitle = "title" in chat ? chat.title : undefined;
@@ -48,6 +51,7 @@ const registerFrom = (
 		...(chatTitle ? { chatTitle } : {}),
 		...(name ? { name } : {}),
 		...(from?.username ? { username: from.username } : {}),
+		...(from?.language_code ? { languageCode: from.language_code } : {}),
 		adminChatId: env.config.adminChatId,
 		guideUrl: env.config.guideUrl,
 	})(env);
@@ -128,9 +132,16 @@ const initBot = (): void => {
 		if (res.success) await markHandled(ctx, `🚫 Bannata: ${targetId}`);
 	});
 
-	bot.command("nome", async (ctx) => {
-		const arg = ctx.message.text.replace(/^\/nome(@\S+)?\s*/, "");
+	bot.command(["nome", "name"], async (ctx) => {
+		const arg = ctx.message.text.replace(/^\/(?:nome|name)(@\S+)?\s*/, "");
 		await nomeCommand(ctx.chat.id, arg)(env);
+	});
+	bot.command(["lingua", "language"], async (ctx) => {
+		const arg = ctx.message.text.replace(
+			/^\/(?:lingua|language)(@\S+)?\s*/,
+			"",
+		);
+		await languageCommand(ctx.chat.id, arg)(env);
 	});
 	bot.command("report", async (ctx) => {
 		const arg = ctx.message.text.replace(/^\/report(@\S+)?\s*/, "");
@@ -139,35 +150,35 @@ const initBot = (): void => {
 	bot.command("help", async (ctx) => {
 		await helpCommand(ctx.chat.id)(env);
 	});
-	bot.command("stato", async (ctx) => {
+	bot.command(["stato", "status"], async (ctx) => {
 		await statoCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("grafici", async (ctx) => {
+	bot.command(["grafici", "charts"], async (ctx) => {
 		await graficiCommand(ctx.chat.id, env.config.miniAppUrl)(env);
 	});
-	bot.command("guida", async (ctx) => {
+	bot.command(["guida", "guide"], async (ctx) => {
 		await guidaCommand(ctx.chat.id, env.config.guideUrl)(env);
 	});
-	bot.command("oggi", async (ctx) => {
+	bot.command(["oggi", "today"], async (ctx) => {
 		await oggiCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("ieri", async (ctx) => {
+	bot.command(["ieri", "yesterday"], async (ctx) => {
 		await ieriCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("settimana", async (ctx) => {
+	bot.command(["settimana", "week"], async (ctx) => {
 		await settimanaCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("scaletta", async (ctx) => {
+	bot.command(["scaletta", "schedule"], async (ctx) => {
 		await scalettaCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("annulla", async (ctx) => {
+	bot.command(["annulla", "undo"], async (ctx) => {
 		await annullaCommand(ctx.chat.id)(env);
 	});
-	bot.command("seno", async (ctx) => {
+	bot.command(["seno", "breast"], async (ctx) => {
 		await senoCommand(ctx.chat.id, new Date())(env);
 	});
-	bot.command("peso", async (ctx) => {
-		const arg = ctx.message.text.replace(/^\/peso(@\S+)?\s*/, "");
+	bot.command(["peso", "weight"], async (ctx) => {
+		const arg = ctx.message.text.replace(/^\/(?:peso|weight)(@\S+)?\s*/, "");
 		await pesoCommand(
 			ctx.chat.id,
 			ctx.from.id,

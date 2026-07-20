@@ -82,6 +82,30 @@ describe("[BOT] handleMessage", () => {
 		expect(mocks.eventRepository.insert).not.toHaveBeenCalled();
 	});
 
+	it("uses English prompt text and buttons for an English chat", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({
+				chatId: 1,
+				language: "en",
+				reportsEnabled: true,
+				status: "approved",
+			}),
+		);
+		mocks.pendingRepository.create.mockImplementation(async (p) =>
+			success({ ...p, id: "pt1", createdAt: new Date() }),
+		);
+
+		await handleMessage(msg("start"))(env);
+
+		expect(mocks.bot.sendTypePrompt).toHaveBeenCalledWith(
+			1,
+			"Feed or sleep? 🍼",
+			"pt1",
+			{ feed: "Feed", sleep: "Sleep" },
+		);
+	});
+
 	it("reports 'no open session' on a bare 'fine' with nothing open", async () => {
 		const { env, mocks } = makeTestEnv();
 		mocks.eventRepository.findOpenSession.mockResolvedValue(success(null));

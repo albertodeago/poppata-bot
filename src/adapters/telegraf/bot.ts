@@ -56,49 +56,73 @@ export const makeTelegrafAdapter =
 					];
 					await bot.telegram.setMessageReaction(chatId, messageId, reaction);
 				},
-				sendConfirmation: async (chatId, text, pendingId) => {
+				sendConfirmation: async (chatId, text, pendingId, labels) => {
 					await bot.telegram.sendMessage(chatId, text, {
 						reply_markup: {
 							inline_keyboard: [
 								[
-									{ text: "Conferma", callback_data: `conf:${pendingId}` },
-									{ text: "Annulla", callback_data: `ann:${pendingId}` },
+									{
+										text: labels?.confirm ?? "Conferma",
+										callback_data: `conf:${pendingId}`,
+									},
+									{
+										text: labels?.cancel ?? "Annulla",
+										callback_data: `ann:${pendingId}`,
+									},
 								],
 							],
 						},
 					});
 				},
-				sendSidePrompt: async (chatId, text, pendingId) => {
+				sendSidePrompt: async (chatId, text, pendingId, labels) => {
 					await bot.telegram.sendMessage(chatId, text, {
 						reply_markup: {
 							inline_keyboard: [
 								[
-									{ text: "Sinistro", callback_data: `sx:${pendingId}` },
-									{ text: "Destro", callback_data: `dx:${pendingId}` },
+									{
+										text: labels?.left ?? "Sinistro",
+										callback_data: `sx:${pendingId}`,
+									},
+									{
+										text: labels?.right ?? "Destro",
+										callback_data: `dx:${pendingId}`,
+									},
 								],
 							],
 						},
 					});
 				},
-				sendTypePrompt: async (chatId, text, pendingId) => {
+				sendTypePrompt: async (chatId, text, pendingId, labels) => {
 					await bot.telegram.sendMessage(chatId, text, {
 						reply_markup: {
 							inline_keyboard: [
 								[
-									{ text: "Poppata", callback_data: `eat:${pendingId}` },
-									{ text: "Nanna", callback_data: `sleep:${pendingId}` },
+									{
+										text: labels?.feed ?? "Poppata",
+										callback_data: `eat:${pendingId}`,
+									},
+									{
+										text: labels?.sleep ?? "Nanna",
+										callback_data: `sleep:${pendingId}`,
+									},
 								],
 							],
 						},
 					});
 				},
-				sendFeedTypePrompt: async (chatId, text, pendingId) => {
+				sendFeedTypePrompt: async (chatId, text, pendingId, labels) => {
 					await bot.telegram.sendMessage(chatId, text, {
 						reply_markup: {
 							inline_keyboard: [
 								[
-									{ text: "🍼 Poppata", callback_data: `eat:${pendingId}` },
-									{ text: "🥛 Biberon", callback_data: `bottle:${pendingId}` },
+									{
+										text: labels?.feed ?? "🍼 Poppata",
+										callback_data: `eat:${pendingId}`,
+									},
+									{
+										text: labels?.bottle ?? "🥛 Biberon",
+										callback_data: `bottle:${pendingId}`,
+									},
 								],
 							],
 						},

@@ -32,7 +32,11 @@ import type { EventEnv } from "./domain/event.js";
 import type { LoggerEnv } from "./domain/logger.js";
 import type { ParserEnv } from "./domain/parse.js";
 import type { PendingEnv } from "./domain/pending.js";
-import { nomeCommand, registerChat } from "./domain/registration.js";
+import {
+	languageCommand,
+	nomeCommand,
+	registerChat,
+} from "./domain/registration.js";
 import type { WeightEnv } from "./domain/weight.js";
 
 const DEV_CHAT_ID = 1;
@@ -89,24 +93,31 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 	const now = new Date();
 	switch (cmd) {
 		case "/stato":
+		case "/status":
 			await statoCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/oggi":
+		case "/today":
 			await oggiCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/ieri":
+		case "/yesterday":
 			await ieriCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/settimana":
+		case "/week":
 			await settimanaCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/scaletta":
+		case "/schedule":
 			await scalettaCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/annulla":
+		case "/undo":
 			await annullaCommand(DEV_CHAT_ID)(env);
 			return true;
 		case "/seno":
+		case "/breast":
 			await senoCommand(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/help":
@@ -119,9 +130,11 @@ const runCommand = async (cmd: string): Promise<boolean> => {
 			await sendWeeklyReport(DEV_CHAT_ID, now)(env);
 			return true;
 		case "/grafici":
+		case "/charts":
 			await graficiCommand(DEV_CHAT_ID, DEV_MINIAPP_URL)(env);
 			return true;
 		case "/guida":
+		case "/guide":
 			await guidaCommand(DEV_CHAT_ID, DEV_GUIDE_URL)(env);
 			return true;
 		default:
@@ -154,8 +167,14 @@ const handleLine = async (line: string): Promise<void> => {
 		return;
 	}
 
-	if (trimmed === "/peso" || trimmed.startsWith("/peso ")) {
-		const arg = trimmed.slice("/peso".length).trim();
+	if (
+		trimmed === "/peso" ||
+		trimmed.startsWith("/peso ") ||
+		trimmed === "/weight" ||
+		trimmed.startsWith("/weight ")
+	) {
+		const command = trimmed.startsWith("/weight") ? "/weight" : "/peso";
+		const arg = trimmed.slice(command.length).trim();
 		await pesoCommand(DEV_CHAT_ID, DEV_USER_ID, "papà", arg, new Date())(env);
 		return;
 	}
@@ -172,9 +191,27 @@ const handleLine = async (line: string): Promise<void> => {
 		return;
 	}
 
-	if (trimmed === "/nome" || trimmed.startsWith("/nome ")) {
-		const arg = trimmed.slice("/nome".length).trim();
+	if (
+		trimmed === "/nome" ||
+		trimmed.startsWith("/nome ") ||
+		trimmed === "/name" ||
+		trimmed.startsWith("/name ")
+	) {
+		const command = trimmed.startsWith("/name") ? "/name" : "/nome";
+		const arg = trimmed.slice(command.length).trim();
 		await nomeCommand(DEV_CHAT_ID, arg)(env);
+		return;
+	}
+
+	if (
+		trimmed === "/lingua" ||
+		trimmed.startsWith("/lingua ") ||
+		trimmed === "/language" ||
+		trimmed.startsWith("/language ")
+	) {
+		const command = trimmed.startsWith("/language") ? "/language" : "/lingua";
+		const arg = trimmed.slice(command.length).trim();
+		await languageCommand(DEV_CHAT_ID, arg)(env);
 		return;
 	}
 

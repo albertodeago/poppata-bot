@@ -2,11 +2,14 @@ import type { Result } from "./result.js";
 
 /** A chat's access lifecycle. The bot serves only `approved` chats. */
 export type AccessStatus = "pending" | "approved" | "banned";
+export type ChatLanguage = "it" | "en";
 
 export interface ChatConfig {
 	chatId: number;
 	/** Baby name shown in report headers; absent until set via /nome. */
 	babyName?: string;
+	/** Shared language for bot replies in this chat. Defaults to Italian. */
+	language: ChatLanguage;
 	/** Whether the cron sends this chat its scheduled reports. Defaults true. */
 	reportsEnabled: boolean;
 	/** Access lifecycle: pending → approved → banned. New chats start pending. */
@@ -22,6 +25,7 @@ export interface ChatConfigRepository {
 	create(input: {
 		chatId: number;
 		createdByName: string;
+		language?: ChatLanguage;
 		username?: string;
 	}): Promise<Result<ChatConfig>>;
 	/** Set/replace the baby name on an existing (or upserted) row. */
@@ -30,6 +34,11 @@ export interface ChatConfigRepository {
 	setReportsEnabled(
 		chatId: number,
 		enabled: boolean,
+	): Promise<Result<ChatConfig>>;
+	/** Set the shared reply language for a chat. */
+	setLanguage(
+		chatId: number,
+		language: ChatLanguage,
 	): Promise<Result<ChatConfig>>;
 	/** Move a chat through its access lifecycle (admin approve/ban). */
 	setStatus(chatId: number, status: AccessStatus): Promise<Result<ChatConfig>>;

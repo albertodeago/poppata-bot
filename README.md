@@ -1,7 +1,7 @@
 # poppata-bot 🍼
 
 A Telegram bot that logs an infant's activities — **eat / sleep / pee / poop / weight** — from
-natural-language Italian messages in a family group chat, and posts automatic daily
+natural-language Italian or English messages in a family group chat, and posts automatic daily
 and weekly reports.
 
 - **Language/runtime:** TypeScript, Node ≥ 24, ESM.
@@ -16,6 +16,10 @@ One baby per chat. A chat **requests access** with `/start` (or by adding the bo
 to a group); the request lands in the admin chat (`ADMIN_CHAT_ID`), and the owner
 **approves or bans** it with one tap. The bot serves only approved chats.
 
+Replies are in the chat's shared language. New chats default from the requester's
+Telegram client language when possible, and can switch anytime with `/lingua it|en`
+or `/language it|en`.
+
 ---
 
 ## Roadmap
@@ -23,14 +27,13 @@ to a group); the request lands in the admin chat (`ADMIN_CHAT_ID`), and the owne
 - [ ] retrofit forgotten events (e.g. it's 20.15 and the user remembers that he skipped a session of 6.30-7.00). A command like `/retrofit 6.30-7.00 poppata dx` would create a new event in the past, and if it overlaps with an existing event, it would ask for confirmation before saving.
   - might solve also the single command like `nanna 12.00 12.30` (to add it directly)
 - [ ] Command to "propose a change / new feature" - request arrives to admin chat, must receive the "text / explanation" of the proposal and possibly who's the request so I can reach out to ask further questions.
-- [ ] lingua inglese? come gestiamo i comandi? (come fanno gli altri bot multilingua?)
 - [ ] Check Vercel and supabase logs
 - [ ] Cron or something that builds a dashboard that I can see usage (how much and from who) (and errors maybe?)
   - [ ] Should I just connect it to Sentry?
 
 ## What it understands
 
-Free-text messages are Italian first; Gemini is a best-effort fallback for anything the rules miss.
+Free-text messages can be Italian or English; Gemini is a best-effort fallback for anything the rules miss.
 
 | You type | What happens |
 |---|---|
@@ -39,13 +42,20 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 | `poppata` | asks **[Sinistro] / [Destro]**, then starts the feed at the message time |
 | `inizio` / `inizio 9.15` | asks **[Poppata] / [Nanna]** before saving |
 | `nanna 22` | starts a sleep session at 22:00 |
+| `nap 10` | starts a sleep session at 10:00 |
 | `fine` | closes the open feed/sleep now, and replies with the duration |
+| `done 9.40` | closes the open feed/sleep at 09:40, and replies with the duration |
 | `fine 9.40` | closes the open feed/sleep at 09:40, and replies with the duration |
 | `nanna 22` / `fine 6.30` | handles a sleep that crosses midnight |
+| `breastfeeding right 9.15` | starts a feed on the right breast at 09:15 |
+| `bottle 100` / `formula 90 8.30` | logs a bottle feed in ml, optionally with a time |
 | `pipì`, `pipi`, `plin`, `pisciata` | logs pee as an instant event |
+| `pee`, `wet diaper` | logs pee as an instant event |
 | `cacca`, `popò`, `pupù`, `cacata` | logs poop as an instant event |
+| `poop`, `dirty diaper` | logs poop as an instant event |
 | `che seno?` / `ultimo seno?` | replies with the latest recorded breast side |
-| `annulla` | removes the last event, same as `/annulla` |
+| `which breast?` / `last side?` | replies with the latest recorded breast side |
+| `annulla` / `undo` | removes the last event, same as `/annulla` or `/undo` |
 
 - A saved instant event, or a start with all needed details and an explicit time, gets a quiet 👍 reaction.
 - A start that defaults to **now** replies with the time it used; a **fine** replies with the computed duration.
@@ -69,8 +79,12 @@ Free-text messages are Italian first; Gemini is a best-effort fallback for anyth
 | `/seno` | show the latest recorded breast side |
 | `/peso [grammi]` | show weight history, or record/update today's weight |
 | `/grafici` | apri la mini app con grafici e statistiche |
+| `/lingua it\|en` | change the bot reply language for this chat |
 | `/report on\|off` | turn the scheduled reports (daily + weekly) on/off for this chat; default is on |
+| `/guida` | open the visual guide |
 | `/help` | show the in-chat help |
+
+Telegram command menus are localized with the Bot API: Italian clients see the commands above, English clients see `/name`, `/status`, `/today`, `/yesterday`, `/week`, `/schedule`, `/undo`, `/breast`, `/weight`, `/charts`, `/language`, `/guide`, `/report`, and `/help`. Both Italian commands and English aliases work in any chat.
 
 The local console harness also accepts `/report` and `/report-week` to fire scheduled reports manually.
 
@@ -96,6 +110,10 @@ Set/replace the name anytime with **`/nome Mario`**; bare **`/nome`** shows the
 current one. The name is optional — reports just omit it when unset. The admin chat
 itself always bypasses the gate. As a CLI fallback you can approve a chat directly
 with `npm run enable-chat -- <chatId> [nome]`.
+
+Change the chat reply language anytime with **`/lingua en`**, **`/lingua it`**,
+**`/language en`**, or **`/language it`**. The setting is shared by the whole chat,
+so group replies stay consistent.
 
 ### Reports
 
@@ -133,6 +151,7 @@ Then type messages, one per line:
 ```
 /start Mario               # → request access for this chat; set the baby name
 /nome Gigi                 # → change the name; "/nome" shows the current one
+/lingua en                 # → switch bot replies to English; /language it switches back
 inizio poppata dx 9.15     # → 👍 reaction
 fine 9.40                  # → "durata poppata: 25m"
 /stato                     # → run a command
@@ -145,6 +164,7 @@ eat / sleep                # → tap the [Poppata] / [Nanna] type button
 @mamma nanna 22            # → override the sender name
 !23:50 fine                # → override the message arrival time
 /oggi  /ieri  /settimana  /scaletta  /annulla  /help
+/today /yesterday /week /schedule /undo /status /language
 /report  /report-week      # → fire the daily/weekly report locally
 ```
 

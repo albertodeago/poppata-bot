@@ -83,6 +83,22 @@ describe("[COMMANDS] /help", () => {
 		expect(text).toContain("/annulla");
 	});
 
+	it("lists English commands for an English chat", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({
+				chatId: 1,
+				language: "en",
+				reportsEnabled: true,
+				status: "approved",
+			}),
+		);
+		await helpCommand(1)(env);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("/today");
+		expect(text).toContain("/language it|en");
+	});
+
 	it("documents bottle feeding", () => {
 		expect(HELP_TEXT.toLowerCase()).toContain("biberon");
 	});
@@ -124,6 +140,23 @@ describe("[COMMANDS] /oggi + /ieri + /settimana", () => {
 		expect(call?.[2]?.toISOString()).toBe(
 			new Date("2026-07-02T12:00:00+02:00").toISOString(),
 		);
+	});
+
+	it("/today uses English report labels for an English chat", async () => {
+		const { env, mocks } = makeTestEnv();
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({
+				chatId: 1,
+				language: "en",
+				reportsEnabled: true,
+				status: "approved",
+			}),
+		);
+		mocks.eventRepository.listSince.mockResolvedValue(success([]));
+		await oggiCommand(1, new Date("2026-07-02T12:00:00+02:00"))(env);
+		const text = mocks.bot.sendMessage.mock.calls[0]?.[1] ?? "";
+		expect(text).toContain("Today");
+		expect(text).toContain("Feeds");
 	});
 
 	it("/ieri uses yesterday's window", async () => {
@@ -260,6 +293,38 @@ describe("[COMMANDS] /peso", () => {
 		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
 			1,
 			"Usa /peso 3400 (peso in grammi).",
+		);
+	});
+
+	it("uses English copy for weight confirmation", async () => {
+		const { env, mocks } = makeTestEnv();
+		const now = new Date("2026-07-03T10:00:00Z");
+		mocks.chatConfigRepository.get.mockResolvedValue(
+			success({
+				chatId: 1,
+				language: "en",
+				reportsEnabled: true,
+				status: "approved",
+			}),
+		);
+		mocks.weightRepository.upsert.mockResolvedValue(
+			success({
+				reading: {
+					id: "w1",
+					chatId: 1,
+					day: romeDay(now),
+					grams: 3400,
+					userId: 1,
+					userName: "dad",
+					createdAt: now,
+				},
+				overwritten: false,
+			}),
+		);
+		await pesoCommand(1, 1, "dad", "3400", now)(env);
+		expect(mocks.bot.sendMessage).toHaveBeenCalledWith(
+			1,
+			"⚖️ Today's weight: 3400 g",
 		);
 	});
 

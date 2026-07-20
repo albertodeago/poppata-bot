@@ -7,6 +7,8 @@ type AccessEnv = ChatConfigEnv & BotEnv & LoggerEnv;
 
 const APPROVED_NOTICE =
 	"✅ Accesso approvato! Scrivi /start o /help per iniziare.";
+const APPROVED_NOTICE_EN =
+	"✅ Access approved! Write /start or /help to get started.";
 
 /** Admin approves a pending chat: flip to approved and tell the requester. */
 export const approveChat =
@@ -17,7 +19,10 @@ export const approveChat =
 			env.logger.error("approveChat: setStatus failed", res.error);
 			return res;
 		}
-		await env.bot.sendMessage(chatId, APPROVED_NOTICE);
+		await env.bot.sendMessage(
+			chatId,
+			res.data.language === "en" ? APPROVED_NOTICE_EN : APPROVED_NOTICE,
+		);
 		return res;
 	};
 

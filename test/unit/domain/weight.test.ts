@@ -41,6 +41,12 @@ describe("[WEIGHT] formatHistory", () => {
 		);
 	});
 
+	it("shows the English empty-state hint", () => {
+		expect(formatHistory([], "en")).toBe(
+			"No weight recorded yet. Write /weight 3400 to record one.",
+		);
+	});
+
 	it("shows a single reading with no delta", () => {
 		expect(formatHistory([reading("2026-07-01", 3200)])).toBe(
 			"⚖️ Peso\n1 lug  3200 g",

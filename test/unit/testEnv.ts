@@ -29,6 +29,8 @@ export const makeTestEnv = () => {
 				vi.fn<ChatConfigEnv["chatConfigRepository"]["setBabyName"]>(),
 			setReportsEnabled:
 				vi.fn<ChatConfigEnv["chatConfigRepository"]["setReportsEnabled"]>(),
+			setLanguage:
+				vi.fn<ChatConfigEnv["chatConfigRepository"]["setLanguage"]>(),
 			setStatus: vi.fn<ChatConfigEnv["chatConfigRepository"]["setStatus"]>(),
 			listAll: vi.fn<ChatConfigEnv["chatConfigRepository"]["listAll"]>(),
 		},
@@ -77,6 +79,15 @@ export const makeTestEnv = () => {
 		bot: mocks.bot,
 		logger: mocks.logger,
 	};
+
+	mocks.chatConfigRepository.get.mockResolvedValue(
+		success({
+			chatId: 1,
+			language: "it",
+			reportsEnabled: true,
+			status: "approved",
+		}),
+	);
 
 	// Default: no open "quanti ml?" question. Every handleMessage checks this,
 	// so give it a safe default; tests that exercise the flow override it.

@@ -61,31 +61,35 @@ export const normalize = (text: string): string =>
 // `ciuccia`/`ciucciato`/`ciucciata` count; the pacifier nouns
 // `ciuccio`/`ciuccetto`/`ciucci` deliberately don't (word-boundary match on
 // `ciuccia` won't touch a word ending in -o/-i, and they aren't in `ciucciat…`).
-const BOTTLE = /\b(biberon|bibe|bibbe|ciuccia|ciucciat\w*)\b/;
+const BOTTLE = /\b(biberon|bibe|bibbe|bottle|formula|ciuccia|ciucciat\w*)\b/;
 // Explicit breast feeding. `latte` is intentionally NOT here — on its own it's
 // breast-or-bottle ambiguous, so it lives in GENERIC_EAT.
-const EAT = /\b(poppata|allatta(?:mento)?|tetta|poppa)\b/;
+const EAT =
+	/\b(poppata|allatta(?:mento)?|tetta|poppa|breastfeed\w*|nurs(?:e|ing)\w*)\b/;
 // Generic feeding words that don't say breast vs bottle. Combined with a breast
 // context (side / `seno`) they mean poppata; otherwise the bot asks which.
-const GENERIC_EAT = /\b(mangia\w*|pappa|latte)\b/;
-const SENO = /\bseno\b/;
+const GENERIC_EAT = /\b(mangia\w*|pappa|latte|feed(?:ing)?|fed|milk)\b/;
+const SENO = /\b(seno|breast)\b/;
 // `mamma` is a frequent mistype/mishearing of `nanna` (same shape, m↔n) — treat
 // it as a sleep keyword so "inizio mamma 3.32" logs a nap, not a feed.
-const SLEEP = /\b(nanna|mamma|dorme|dormit\w*|sonnellino|sleep)\b/;
+const SLEEP =
+	/\b(nanna|mamma|dorme|dormit\w*|sonnellino|sleep\w*|nap\w*|asleep)\b/;
 // Text is normalized (accent-stripped, lowercased) before matching, so
 // `pipì`→`pipi`, `popò`→`popo`, `pupù`→`pupu`. Word-stems (`\w*`) cover
 // conjugations while avoiding false positives like `piscina` (pool), `cacao`,
 // `caccia` (hunt), `cagnolino`, `popolo`.
-const PEE = /\b(pipi|plin|pisci[oa]\w*)\b/;
-const POOP = /\b(cacca|cacchin\w*|cacat\w*|caga\w*|pupu|popo|feci|poop)\b/;
+const PEE = /\b(pipi|plin|pisci[oa]\w*|pee\w*|wet diaper)\b/;
+const POOP =
+	/\b(cacca|cacchin\w*|cacat\w*|caga\w*|pupu|popo|feci|poop\w*|dirty diaper|stool)\b/;
 const START = /\b(inizio|inizia|start|comincia)\b/;
-const END = /\b(fine|finit[ao]|stop|end|basta)\b/;
+const END = /\b(fine|finit[ao]|stop|end|done|finish(?:ed)?|basta)\b/;
 const SIDE_DX = /\b(dx|destra|destro|right)\b/;
 const SIDE_SX = /\b(sx|sinistra|sinistro|left)\b/;
 // Words that don't drive parsing but still mark a message as *meant for the
 // bot*. Deliberately broader than the parse regexes (e.g. `pappa`/`mangia`
 // aren't feed keywords) — see `hasBabySignal`.
-const EXTRA_SIGNAL = /\b(mangia\w*|pappa|biberon|seno)\b/;
+const EXTRA_SIGNAL =
+	/\b(mangia\w*|pappa|biberon|seno|feed(?:ing)?|fed|milk|breast|diaper)\b/;
 
 /**
  * True when the (already-normalized) text contains any baby-domain vocabulary.

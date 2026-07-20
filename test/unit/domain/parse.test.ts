@@ -106,8 +106,53 @@ describe("[PARSE] parseRules", () => {
 			},
 		},
 		{
+			input: "breastfeeding right 9.15",
+			expect: {
+				type: "eat",
+				action: "start",
+				side: "dx",
+				hour: 9,
+				minute: 15,
+				hasTime: true,
+				confidence: 1,
+			},
+		},
+		{
+			input: "nursing left",
+			expect: { type: "eat", action: "start", side: "sx", confidence: 1 },
+		},
+		{
+			input: "nap 10",
+			expect: {
+				type: "sleep",
+				action: "start",
+				hour: 10,
+				minute: 0,
+				hasTime: true,
+				confidence: 1,
+			},
+		},
+		{
+			input: "done 9.40",
+			expect: {
+				action: "end",
+				hour: 9,
+				minute: 40,
+				hasTime: true,
+				confidence: 1,
+			},
+		},
+		{
 			input: "piscio",
 			expect: { type: "pee", action: "instant", confidence: 1 },
+		},
+		{
+			input: "wet diaper",
+			expect: { type: "pee", action: "instant", confidence: 1 },
+		},
+		{
+			input: "dirty diaper",
+			expect: { type: "poop", action: "instant", confidence: 1 },
 		},
 		{
 			input: "pisciata",
@@ -173,6 +218,28 @@ describe("[PARSE] bottle", () => {
 				action: "instant",
 				amountMl: 100,
 				hasTime: false,
+				confidence: 1,
+			},
+		},
+		{
+			input: "bottle 100",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 100,
+				hasTime: false,
+				confidence: 1,
+			},
+		},
+		{
+			input: "formula 90 8.30",
+			expect: {
+				type: "bottle",
+				action: "instant",
+				amountMl: 90,
+				hour: 8,
+				minute: 30,
+				hasTime: true,
 				confidence: 1,
 			},
 		},
@@ -266,6 +333,9 @@ describe("[PARSE] ambiguous feed", () => {
 		{ input: "ha mangiato", expect: { ambiguousFeed: true } },
 		{ input: "mangia", expect: { ambiguousFeed: true } },
 		{ input: "pappa", expect: { ambiguousFeed: true } },
+		{ input: "feeding", expect: { ambiguousFeed: true } },
+		{ input: "fed", expect: { ambiguousFeed: true } },
+		{ input: "milk", expect: { ambiguousFeed: true } },
 		{ input: "latte", expect: { ambiguousFeed: true } },
 		{ input: "latte artificiale", expect: { ambiguousFeed: true } },
 		// separator time is preserved; a bare number is ignored (ml-or-time unclear)
