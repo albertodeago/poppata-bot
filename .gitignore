@@ -4,7 +4,8 @@ coverage/
 .env
 *.log
 .DS_Store
+.local/
 
 old-data.csv
-scripts/backfill*
+scripts/
 stats-prototype

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Telegram bot to track an infant's activities from natural-language messages",
   "type": "module",
-  "engines": { "node": ">=24.0.0" },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev:local": "tsx src/dev.ts",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",
