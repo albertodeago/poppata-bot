@@ -18,6 +18,8 @@ export interface EatSeries extends TopicSeries {
 	feedCount: number;
 	bottleCount: number;
 	bottleMl: number;
+	/** Millilitres of bottle milk per chart bucket. Breastfeeds have no volume. */
+	bottleMlBuckets: number[];
 	avgFeedMs: number;
 	feedDx: number;
 	feedSx: number;
@@ -80,6 +82,7 @@ const frameStats = (
 		feedCount: whole.feedCount,
 		bottleCount: whole.bottleCount,
 		bottleMl: whole.bottleMl,
+		bottleMlBuckets: per.map((s) => s.bottleMl),
 		avgFeedMs: whole.avgFeedMs,
 		feedDx: whole.feedDx,
 		feedSx: whole.feedSx,
