@@ -76,8 +76,24 @@ describe("[STATS] buildStatsPayload", () => {
 		expect(p.day.eat.feedCount).toBe(1);
 		expect(p.day.eat.bottleCount).toBe(1);
 		expect(p.day.eat.bottleMl).toBe(120);
+		expect(p.day.eat.bottleMlBuckets[3]).toBe(120);
+		expect(
+			p.day.eat.bottleMlBuckets.reduce((sum, value) => sum + value, 0),
+		).toBe(120);
 		expect(p.day.eat.feedDx).toBe(1);
 		expect(p.day.eat.feedSx).toBe(0);
+	});
+
+	it("keeps bottle millilitre buckets empty for breastfeeds", () => {
+		const breastOnly = buildStatsPayload({
+			events: events.filter((event) => event.type !== "bottle"),
+			weights: [],
+			now,
+		});
+		expect(breastOnly.day.eat.bottleMl).toBe(0);
+		expect(breastOnly.day.eat.bottleMlBuckets).toEqual(
+			Array(breastOnly.day.eat.buckets.length).fill(0),
+		);
 	});
 
 	it("places pee in the correct 3h bucket", () => {

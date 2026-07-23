@@ -121,6 +121,8 @@
   .seg button:last-child{border-right:none}
   .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
   .seg button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .metric{display:none;padding:0 16px 10px;align-items:center;justify-content:flex-end;gap:8px}
+  .metric .title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft)}
 
   /* chart */
   .chartwrap{
@@ -194,6 +196,14 @@
       </div>
     </div>
 
+    <div class="metric" id="eatMetric" data-od-id="eat-metric">
+      <span class="title" id="eatMetricTitle">Grafico</span>
+      <div class="seg" role="group" aria-label="Metrica poppate">
+        <button data-eat-metric="feeds" aria-pressed="false">Poppate</button>
+        <button data-eat-metric="ml" aria-pressed="true">ml</button>
+      </div>
+    </div>
+
     <div class="chartwrap" data-od-id="chart">
       <canvas id="chart" role="img" aria-label="Chart of selected topic over time"></canvas>
       <div class="axis" id="axis"></div>
@@ -223,6 +233,9 @@
       frames: { day: "Giorno", week: "Settimana", month: "Mese" },
       frameLabels: { day: "Oggi", week: "Questa settimana", month: "Questo mese" },
       period: "Periodo",
+      chart: "Grafico",
+      feedMetric: "Metrica poppate",
+      feeds: "Poppate",
       topicGroup: "Scegli un argomento da visualizzare",
       timeWindow: "Periodo",
       liveData: "Dati live",
@@ -256,6 +269,9 @@
       frames: { day: "Day", week: "Week", month: "Month" },
       frameLabels: { day: "Today", week: "This week", month: "This month" },
       period: "Period",
+      chart: "Chart",
+      feedMetric: "Feed metric",
+      feeds: "Feeds",
       topicGroup: "Pick a topic to graph",
       timeWindow: "Time window",
       liveData: "Live data",
@@ -313,7 +329,7 @@
   const fmtDay = (ymd) => { const [, mo, da] = ymd.split("-"); return Number(da) + "/" + Number(mo); };
 
   const cvs = $("chart"), ctx = cvs.getContext("2d");
-  let P = null, topic = "eat", frame = "day";
+  let P = null, topic = "eat", frame = "day", eatMetric = "ml";
 
   function applyLanguage() {
     const t = text();
@@ -329,8 +345,13 @@
       if (emoji) button.appendChild(emoji);
       button.appendChild(document.createTextNode(topicTitle(button.dataset.topic)));
     });
-    document.querySelectorAll(".seg button").forEach((button) => {
+    document.querySelectorAll("[data-frame]").forEach((button) => {
       button.textContent = t.frames[button.dataset.frame];
+    });
+    $("eatMetricTitle").textContent = t.chart;
+    $("eatMetric").querySelector(".seg").setAttribute("aria-label", t.feedMetric);
+    document.querySelectorAll("[data-eat-metric]").forEach((button) => {
+      button.textContent = button.dataset.eatMetric === "ml" ? "ml" : t.feeds;
     });
     const live = document.querySelector(".live");
     const dot = live.querySelector(".dot");
@@ -378,7 +399,7 @@
     setFrame(frame);
   }
 
-  // { values, labels, line, decimal, color }
+  // { values, labels, line, decimal, color, unit }
   function series() {
     const color = getVar(TOPICS[topic].varName);
     if (topic === "weight") {
@@ -387,8 +408,18 @@
       return { values: pts.map((p) => p.kg), labels: pts.map((p) => fmtDay(p.day)), line: true, decimal: true, color };
     }
     const fs = P[frame], t = fs[topic];
+    if (topic === "eat" && eatMetric === "ml" && t.bottleMl > 0) {
+      return { values: t.bottleMlBuckets, labels: fs.labels, line: false, decimal: false, color, unit: "ml" };
+    }
     const values = topic === "sleep" ? t.buckets.map(hrs) : t.buckets;
-    return { values, labels: fs.labels, line: false, decimal: topic === "sleep", color };
+    return { values, labels: fs.labels, line: false, decimal: topic === "sleep", color, unit: "" };
+  }
+
+  function setEatMetricVisibility() {
+    const hasBottleMl = P && P[frame].eat.bottleMl > 0;
+    const visible = topic === "eat" && hasBottleMl;
+    $("eatMetric").style.display = visible ? "flex" : "none";
+    document.querySelectorAll("[data-eat-metric]").forEach((button) => button.setAttribute("aria-pressed", button.dataset.eatMetric === eatMetric));
   }
 
   function setHeroAndCards() {
@@ -410,8 +441,13 @@
     const t = P[frame][topic];
     if (topic === "eat") {
       $("heroLabel").textContent = tText.frameLabels[frame] + " · " + topicTitle("eat").toLowerCase();
-      $("heroValue").textContent = t.total;
-      $("heroSub").textContent = t.feedSx + " " + tText.sides.left + " · " + t.feedDx + " " + tText.sides.right;
+      if (eatMetric === "ml" && t.bottleMl > 0) {
+        $("heroValue").textContent = t.bottleMl + "ml";
+        $("heroSub").textContent = bottleCountLabel(t.bottleCount);
+      } else {
+        $("heroValue").textContent = t.total;
+        $("heroSub").textContent = t.feedSx + " " + tText.sides.left + " · " + t.feedDx + " " + tText.sides.right;
+      }
       $("statTotal").textContent = t.bottleMl + "ml";
       $("statTotalK").innerHTML = statKey(tText.stats.bottle, bottleCountLabel(t.bottleCount));
       $("statAvg").textContent = fmtDur(t.avgFeedMs);
@@ -437,10 +473,12 @@
 
   function render() {
     if (!P) return;
+    setEatMetricVisibility();
     const s = series();
     setHeroAndCards();
     drawChart(s.values, s.labels, s);
-    cvs.setAttribute("aria-label", topicTitle(topic) + ": " + s.values.join(", "));
+    const suffix = s.unit ? " " + s.unit : "";
+    cvs.setAttribute("aria-label", topicTitle(topic) + ": " + s.values.map((value) => value + suffix).join(", "));
   }
 
   function setTopic(t) {
@@ -458,7 +496,13 @@
   }
   function setFrame(f) {
     frame = f;
-    document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.frame === f));
+    document.querySelectorAll("[data-frame]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.frame === f));
+    persist();
+    render();
+  }
+  function setEatMetric(metric) {
+    eatMetric = metric;
+    document.querySelectorAll("[data-eat-metric]").forEach((button) => button.setAttribute("aria-pressed", button.dataset.eatMetric === metric));
     persist();
     render();
   }
@@ -495,7 +539,7 @@
         ctx.fillStyle = "#141210"; ctx.fillRect(x + 3, y + 3, bw, bh);
         ctx.fillStyle = d.color; ctx.fillRect(x, y, bw, bh);
         ctx.strokeStyle = "#141210"; ctx.lineWidth = 3; ctx.strokeRect(x, y, bw, bh);
-        if (v > 0 && bw > 16) { ctx.fillStyle = "#141210"; ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.fillText(String(v), x + bw / 2, y - 4); }
+        if (v > 0 && bw > 16) { ctx.fillStyle = "#141210"; ctx.font = "700 11px system-ui"; ctx.textAlign = "center"; ctx.fillText(String(v) + (d.unit || ""), x + bw / 2, y - 4); }
       });
     }
     labs.forEach((l) => { const sp = document.createElement("span"); sp.textContent = l; ax.appendChild(sp); });
@@ -507,18 +551,20 @@
   }
 
   function persist() {
-    try { localStorage.setItem("babystats", JSON.stringify({ topic, frame })); } catch (_e) {}
+    try { localStorage.setItem("babystats", JSON.stringify({ topic, frame, eatMetric })); } catch (_e) {}
   }
   function restore() {
     try {
       const s = JSON.parse(localStorage.getItem("babystats") || "{}");
       if (s.topic && TOPICS[s.topic]) topic = s.topic;
       if (["day", "week", "month"].includes(s.frame)) frame = s.frame;
+      if (["feeds", "ml"].includes(s.eatMetric)) eatMetric = s.eatMetric;
     } catch (_e) {}
   }
 
   document.querySelectorAll(".topic").forEach((b) => b.addEventListener("click", () => setTopic(b.dataset.topic)));
-  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setFrame(b.dataset.frame)));
+  document.querySelectorAll("[data-frame]").forEach((b) => b.addEventListener("click", () => setFrame(b.dataset.frame)));
+  document.querySelectorAll("[data-eat-metric]").forEach((b) => b.addEventListener("click", () => setEatMetric(b.dataset.eatMetric)));
   window.addEventListener("resize", render);
 
   load();
